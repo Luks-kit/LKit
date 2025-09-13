@@ -56,3 +56,4 @@ routine main() {
     //when a handle goes out of scope, the resource its bound to is released. 
 }
 ```
+Note: this doesn't actually exist yet... this is just the ideal language
