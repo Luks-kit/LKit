@@ -1,0 +1,6 @@
+build/toy < build/test.toy 
+Mini language REPL (enter empty line to quit)
+> Result = 3
+> Result = 3
+> Result = 0
+> 
