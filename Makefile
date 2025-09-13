@@ -1,5 +1,5 @@
-CXX = g++
-CFLAGS = -Wall -Wextra -g -Iinc
+CXX=g++
+CXXFLAGS=-Wall -Wextra -g -Iinc
 TARGET=build/toy
 TESTERFILE:= $(build/test.toy)
 TESTOUTPUT:=$(build/testresult.toy)
@@ -9,7 +9,7 @@ OBJ:= $(SRC:.c=.o)
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CXX)  $(OBJ) $(CFLAGS) -o $(TARGET)
+	$(CXX)  $(OBJ) $(CXXFLAGS) -o $(TARGET)
 
 src/%.o: src/%.cpp
 	$(CXX) -c $< -o $@ $(CFLAGS)
