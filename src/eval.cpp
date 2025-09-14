@@ -3,31 +3,45 @@
 #include <string>
 #include "eval.hpp"
 
-struct Var {
-    std::string name;
-    int* addr;
-};
+static std::vector<std::vector<Var>> scopes = { {} };
 
-static std::vector<Var> vars;
+static void push_scope() {
+    scopes.push_back({});
+}
+
+static void pop_scope() {
+    // Free heap memory for variables in this scope
+    for (auto& v : scopes.back()) {
+        delete v.addr;
+    }
+    scopes.pop_back();
+}
 
 static int get_var(const std::string& name) {
-    for (auto& v : vars) {
-        if (v.name == name)
-            return *(v.addr);
+    // Search from innermost scope outwards
+    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+        for (auto& v : *it) {
+            if (v.name == name)
+                return *(v.addr);
+        }
     }
     std::cerr << "Undefined variable: " << name << "\n";
     exit(1);
 }
 
 static void set_var(const std::string& name, int value) {
-    for (auto& v : vars) {
-        if (v.name == name) {
-            *(v.addr) = value;
-            return;
+    // Search from innermost scope outwards
+    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+        for (auto& v : *it) {
+            if (v.name == name) {
+                *(v.addr) = value;
+                return;
+            }
         }
     }
+    // If not found, define in current (innermost) scope
     Var var{name, new int(value)};
-    vars.push_back(var);
+    scopes.back().push_back(var);
 }
 
 static int assign(AST* lhs, int val) {
@@ -39,7 +53,6 @@ static int assign(AST* lhs, int val) {
         exit(1);
     }
 }
-
 
 int eval(AST* n) {
     switch (n->type) {
@@ -53,7 +66,7 @@ int eval(AST* n) {
             else if (n->ifstmt.else_branch)
                 return eval(n->ifstmt.else_branch);
             return 0; // if no else branch
-}
+            }
 
             case ASTType::BinOp: {
             int l = n->binop.left ? eval(n->binop.left) : 0;
@@ -105,6 +118,16 @@ int eval(AST* n) {
             set_var(n->assign.name, val);
             return val;
         }
+
+        case ASTType::Block: {
+            push_scope();
+            int result = 0;
+            for (AST* stmt : n->block.stmts) {
+                result = eval(stmt);
+            }
+            pop_scope();
+            return result;
+}
     }
     return 0;
 }
