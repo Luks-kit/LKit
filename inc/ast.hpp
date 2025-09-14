@@ -10,6 +10,8 @@ enum class ASTType {
     BinOp,
     Assign,
     If,
+    While,
+    Block,
 };
 
 struct AST {
@@ -32,6 +34,7 @@ struct AST {
         struct {
             AST* cond, *then_branch, *else_branch;
         } ifstmt;
+        struct {std::vector<AST*> stmts; } block;
     };
     // Constructors
     static AST* make_number(int v);
@@ -45,6 +48,12 @@ struct AST {
         n->ifstmt.cond = cond;
         n->ifstmt.then_branch = then_branch;
         n->ifstmt.else_branch = else_branch;
+        return n;
+    }
+    static AST* make_block(const std::vector<AST*>& stmts) {
+        AST* n = new AST();
+        n->type = ASTType::Block;
+        n->block.stmts = stmts;
         return n;
     }
 };
