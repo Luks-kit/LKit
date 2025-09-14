@@ -132,9 +132,20 @@ AST* parse_expr() {
     return parse_comparison();
 }
 
+static AST* parse_block() {
+    expect(TokenType::LBrace);
+    std::vector<AST*> stmts;
+    while (current.type != TokenType::RBrace && current.type != TokenType::Eof) {
+        stmts.push_back(parse_statement());
+    }
+    expect(TokenType::RBrace);
+    return AST::make_block(stmts);
+}
+
 // Statement
 AST* parse_stmt() {
     if (current.type == TokenType::KwIf) return parse_if();
+    if (current.type == TokenType::LBrace) { return parse_block();}
     if (current.type == TokenType::Ident) {
         std::string name = current.lexeme;
         advance();
