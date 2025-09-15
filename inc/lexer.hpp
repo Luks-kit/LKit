@@ -10,6 +10,8 @@ enum class TokenType {
 
     // arithmetic
     Plus, Minus, Star, Slash,
+    PlusEq, MinusEq, StarEq, SlashEq,
+    Increment, Decrement, Pow,
     // bitwise
     Amp, AmpEq, Pipe, PipeEq, Caret, CaretEq, Tilde, 
     
@@ -36,6 +38,7 @@ extern std::string src;
 extern int pos;
 
 // lexer functions
+void reset_lexer(const std::string& input);
 Token get_next_token();
 void advance();
 

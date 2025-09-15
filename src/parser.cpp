@@ -11,6 +11,33 @@ void advance();
 static AST* parse_expr();
 static AST* parse_if();
 static AST* parse_comparison();
+static AST* parse_stmt();
+
+
+static void expect(TokenType type) {
+    if (current.type != type) {
+        std::cerr << "Expected token " << (int)type 
+                  << " but got " << (int)current.type << "\n";
+        exit(1);
+    }
+    advance();
+}
+
+AST* parse_while() {
+    advance(); // consume 'while'
+
+    if (current.type != TokenType::LParen) { std::cerr << "Expected (\n"; exit(1);}
+    advance();
+
+    AST* cond = parse_comparison(); // condition uses full precedence
+
+    if (current.type != TokenType::RParen) { std::cerr << "Expected )\n"; exit(1);}
+    advance();
+
+    AST* body = parse_stmt(); // single statement or a block
+
+    return AST::make_while(cond, body);
+}
 
 // Factor: numbers, chars, identifiers, parentheses
 static AST* parse_factor() {
@@ -54,6 +81,8 @@ AST* parse_unary() {
         AST* expr = parse_unary();
         return AST::make_binop("neg", nullptr, expr);
     }
+    
+
     return parse_factor();
 }
 
@@ -72,8 +101,12 @@ AST* parse_term() {
 // Additive: + -
 AST* parse_additive() {
     AST* n = parse_term();
-    while (current.type == TokenType::Plus || current.type == TokenType::Minus) {
-        std::string op = (current.type == TokenType::Plus) ? "+" : "-";
+    while ( current.type == TokenType::Plus || current.type == TokenType::Minus ||
+            current.type == TokenType::PlusEq || current.type == TokenType::MinusEq ||
+            current.type == TokenType::Increment || current.type == TokenType:: Decrement) {
+        std::string op = (current.type == TokenType::Plus) ? "+" :
+            (current.type == TokenType::Minus)? "-" :
+            (current.type == TokenType::PlusEq )? "+=" : "-=";
         advance();
         AST* right = parse_term();
         n = AST::make_binop(op, n, right);
@@ -135,17 +168,18 @@ AST* parse_expr() {
 static AST* parse_block() {
     expect(TokenType::LBrace);
     std::vector<AST*> stmts;
-    while (current.type != TokenType::RBrace && current.type != TokenType::Eof) {
-        stmts.push_back(parse_statement());
+    while (current.type != TokenType::RBrace && current.type != TokenType::End) {
+        stmts.push_back(parse_stmt());
     }
     expect(TokenType::RBrace);
     return AST::make_block(stmts);
 }
 
 // Statement
-AST* parse_stmt() {
+static AST* parse_stmt() {
     if (current.type == TokenType::KwIf) return parse_if();
     if (current.type == TokenType::LBrace) { return parse_block();}
+    if (current.type == TokenType::KwWhile) {return parse_while();}
     if (current.type == TokenType::Ident) {
         std::string name = current.lexeme;
         advance();

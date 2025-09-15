@@ -4,25 +4,43 @@
 #include "parser.hpp"
 #include "eval.hpp"
 
-int main() {
-    std::cout << "Mini language REPL (enter empty line to quit)\n";
+void reploop(){
+std::string line, source;
+int brace_balance = 0;
 
     while (true) {
         std::cout << "> ";
-        std::string line;
         if (!std::getline(std::cin, line) || line.empty()) break;
 
-        src = line;
-        pos = 0;
-        advance();              // prime lexer
+        source += line + "\n";
+        for (char c : line) {
+            if (c == '{') brace_balance++;
+            else if (c == '}') brace_balance--;
+        }
 
-        AST* tree = parse();    // parse one statement
+        if (brace_balance > 0) continue; // keep reading until closed
+        if (brace_balance < 0) {
+            std::cerr << "Unmatched closing brace!\n";
+            source.clear();
+            brace_balance = 0;
+            continue;
+        }
+
+        // Only parse when braces are balanced
+        reset_lexer(source);
+        AST* tree = parse();
         int result = eval(tree);
-
         std::cout << "Result = " << result << "\n";
-    }
+        source.clear();
+}       cleanup_scopes();
+    
+}
 
-    free_vars();
+int main() {
+    
+    reploop();
+
+
     return 0;
 }
 

@@ -4,7 +4,8 @@
 #include "ast.hpp"
 
 int eval(AST* n);
-void free_vars();
+void cleanup_scopes();
+
 
 #endif
 

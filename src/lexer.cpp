@@ -18,6 +18,12 @@ static bool is_ident_char(char c) {
     return isalnum(c) || c == '_';
 }
 
+void reset_lexer(const std::string& input) {
+    src = input;
+    pos = 0;
+    current = get_next_token();
+}
+
 Token get_next_token() {
     skip_whitespace();
     if (pos >= (int)src.size()) {
@@ -59,10 +65,52 @@ Token get_next_token() {
     // single char tokens
     pos++;
     switch (c) {
-        case '+': return {TokenType::Plus, 0, std::string(1, '+')};
-        case '-': return {TokenType::Minus, 0, std::string(1, '-')};
-        case '*': return {TokenType::Star, 0, std::string(1, '*')};
-        case '/': return {TokenType::Slash, 0, std::string(1, '/')};
+        case '+': {
+            pos++;
+            if (pos < src.size() && src[pos] == '+') {
+                pos++;
+                return Token{TokenType::Increment, 0, "++"};
+            } else if (pos < src.size() && src[pos] == '=') {
+                pos++;
+                return Token{TokenType::PlusEq, 0, "+="};
+            }
+            return Token{TokenType::Plus, 0, "+"};
+            }
+
+        case '-':{
+            pos++;
+            if (pos < src.size() && src[pos] == '-') {
+                pos++;
+                return Token{TokenType::Decrement, 0, "--"};
+            } else if (pos < src.size() && src[pos] == '=') {
+                pos++;
+                return Token{TokenType::MinusEq, 0, "-="};
+            }
+            return Token{TokenType::Minus, 0, "-"};
+            }
+
+        case '*': {
+            pos++;
+            if (pos < src.size() && src[pos] == '*') {
+                pos++;
+                return Token{TokenType::Pow, 0, "**"};
+            } else if (pos < src.size() && src[pos] == '=') {
+                pos++;
+                return Token{TokenType::StarEq, 0, "*="};
+            }
+            return Token{TokenType::Star, 0, "*"};
+            }
+
+
+        case '/': {
+            pos++;
+            if (pos < src.size() && src[pos] == '=') {
+                pos++;
+                return Token{TokenType::SlashEq, 0, "/="};
+            } 
+            return Token{TokenType::Slash, 0, "/"};
+        }
+
         case '&': {
             pos++;
             if (pos < src.size() && src[pos] == '&') {

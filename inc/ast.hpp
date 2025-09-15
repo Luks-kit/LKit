@@ -2,6 +2,8 @@
 #define AST_HPP
 
 #include <string>
+#include <vector>
+
 
 enum class ASTType {
     Number,
@@ -20,20 +22,10 @@ struct AST {
         // Values
         int value = 0;            // for number or char
         std::string name;         
-        struct {
-            // Binop
-            std::string op;
-            AST* left = nullptr;
-            AST* right = nullptr;
-        } binop;
-        struct {
-            // Assign
-            std::string name;
-            AST* expr = nullptr;
-        } assign;
-        struct {
-            AST* cond, *then_branch, *else_branch;
-        } ifstmt;
+        struct { std::string op; AST* left = nullptr; AST* right = nullptr; } binop;
+        struct { std::string name; AST* expr = nullptr; } assign;
+        struct { AST* cond, *then_branch, *else_branch;} ifstmt;
+        struct { AST* cond; AST* body;} whilestmt;
         struct {std::vector<AST*> stmts; } block;
     };
     // Constructors
@@ -56,6 +48,15 @@ struct AST {
         n->block.stmts = stmts;
         return n;
     }
+
+   static AST* make_while(AST* cond, AST* body) {
+        AST* n = new AST;
+        n->type = ASTType::While;
+        n->whilestmt.cond = cond;
+        n->whilestmt.body = body;
+        return n;
+    }
+
 };
 
 #endif

@@ -1,7 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cmath>
 #include "eval.hpp"
+
+struct Var {
+    std::string name;
+    int* addr;
+};
 
 static std::vector<std::vector<Var>> scopes = { {} };
 
@@ -15,6 +21,11 @@ static void pop_scope() {
         delete v.addr;
     }
     scopes.pop_back();
+}
+
+void cleanup_scopes() {
+    while (!scopes.empty())
+        pop_scope();
 }
 
 static int get_var(const std::string& name) {
@@ -67,14 +78,23 @@ int eval(AST* n) {
                 return eval(n->ifstmt.else_branch);
             return 0; // if no else branch
             }
-
-            case ASTType::BinOp: {
+        case ASTType::While: {
+            int result = 0;
+            while (eval(n->whilestmt.cond)) {
+                result = eval(n->whilestmt.body);
+            }
+            return result;
+        }
+        case ASTType::BinOp: {
             int l = n->binop.left ? eval(n->binop.left) : 0;
             int r = eval(n->binop.right);
 
             if (n->binop.op == "+") return l + r;
+            else if (n->binop.op == "++") return r++;
             else if (n->binop.op == "-") return l - r;
+            else if (n->binop.op == "--") return r--;
             else if (n->binop.op == "*") return l * r;
+            else if (n->binop.op == "**") return pow(l,r);
             else if (n->binop.op == "/") return r ? l / r : (std::cerr << "division by zero\n", exit(1), 0);
             
             else if (n->binop.op == "&")  return l & r;
@@ -95,7 +115,6 @@ int eval(AST* n) {
             else if (n->binop.op == ">=") return l >= r;
             else if (n->binop.op == "==") return l == r;
             else if (n->binop.op == "!=") return l != r;
-
             // Compound assignments
             else if (n->binop.op == "&=") {
                 int val = l & r;
@@ -105,11 +124,30 @@ int eval(AST* n) {
                 int val = l | r;
                 return assign(n->binop.left, val);
             }
-            if (n->binop.op == "^=") {
+            else if (n->binop.op == "^=") {
                 int val = l ^ r;
                 return assign(n->binop.left, val);
             }
+            else if (n->binop.op == "+="){
+                int val = l + r;
+                return assign(n->binop.left, val);
+            }
             
+            else if (n->binop.op == "-="){
+                int val = l - r;
+                return assign(n->binop.left, val);
+            }
+            
+            else if (n->binop.op == "/="){
+                int val = l / r;
+                return assign(n->binop.left, val);
+            }
+
+            else if (n->binop.op == "*="){
+                int val = l * r;
+                return assign(n->binop.left, val);
+            }
+
             printf("Unknown binop\n"); exit(1);
             }
 
@@ -132,10 +170,4 @@ int eval(AST* n) {
     return 0;
 }
 
-void free_vars() {
-    for (auto& v : vars) {
-        delete v.addr;
-    }
-    vars.clear();
-}
 
