@@ -44,11 +44,11 @@ import std::io::file
 import std::io::console
 
 subr factorial (int n) returns int {
-  return (n < 2) ? n * factorial(n - 1) : 1;
+  return (n < 2) ? 1 : n * factorial(n - 1);
 }
 
 routine main() {
-    // create a file handle via kit import
+    // create a file handle via kit import`
     file::Writer w = file::open("output.txt");
     console.print("yo! this is factorial of 5: %d{factorial(5)}");
     // write deterministically, no surprises
