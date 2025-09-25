@@ -53,9 +53,9 @@ Token get_next_token() {
         if (ident == "bool") return {TokenType::KwBool, 0, ident};
         if (ident == "float") return {TokenType::KwFloat, 0, ident};
         if (ident == "string") return {TokenType::KwString, 0, ident};
-        if (ident == "if") return {TokenType::KwIf, 0, ident};
-        if (ident == "else") return {TokenType::KwElse, 0, ident};
-        if (ident == "while") return {TokenType::KwWhile, 0, ident};
+        if (ident == "check") return {TokenType::KwIf, 0, ident};
+        if (ident == "then") return {TokenType::KwElse, 0, ident};
+        if (ident == "recheck") return {TokenType::KwWhile, 0, ident};
         if (ident == "return") return {TokenType::KwReturn, 0, ident};
         if (ident == "true") return {TokenType::KwTrue, 1, ident};
         if (ident == "false") return {TokenType::KwFalse, 0, ident};
