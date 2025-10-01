@@ -70,29 +70,27 @@ int eval(AST* n) {
         case ASTType::Number: return n->value;
         case ASTType::Char:   return n->value;
         case ASTType::Ident:  return get_var(n->name);
-        case ASTType::If: {
-            int cond_val = eval(n->ifstmt.cond);
+        case ASTType::Check: {
+            int cond_val = eval(n->checkstmt.cond);
             if (cond_val)
-                return eval(n->ifstmt.then_branch);
-            else if (n->ifstmt.else_branch)
-                return eval(n->ifstmt.else_branch);
+                return eval(n->checkstmt.ok_branch);
+            else if (n->checkstmt.then_branch)
+                return eval(n->checkstmt.then_branch);
             return 0; // if no else branch
             }
-        case ASTType::While: {
+        case ASTType::Recheck: {
             int result = 0;
-            while (eval(n->whilestmt.cond)) {
-                result = eval(n->whilestmt.body);
+            while (eval(n->recheckstmt.cond)) {
+                result = eval(n->recheckstmt.body);
             }
             return result;
         }
         case ASTType::BinOp: {
-            int l = n->binop.left ? eval(n->binop.left) : 0;
-            int r = eval(n->binop.right);
+            int l = n->binop.lhs ? eval(n->binop.lhs) : 0;
+            int r = eval(n->binop.rhs);
 
             if (n->binop.op == "+") return l + r;
-            else if (n->binop.op == "++") return r++;
             else if (n->binop.op == "-") return l - r;
-            else if (n->binop.op == "--") return r--;
             else if (n->binop.op == "*") return l * r;
             else if (n->binop.op == "**") return pow(l,r);
             else if (n->binop.op == "/") return r ? l / r : (std::cerr << "division by zero\n", exit(1), 0);
@@ -104,7 +102,7 @@ int eval(AST* n) {
             else if (n->binop.op == "&&") return (l != 0) && (r != 0);
             else if (n->binop.op == "||") return (l != 0) || (r != 0);
 
-            else if (n->binop.op == "~")  return ~r;        // unary, left is nullptr
+            else if (n->binop.op == "~")  return ~r;        // unary, lhs is nullptr
             else if (n->binop.op == "neg") return -r;      // unary minus
             
             else if (n->binop.op == "!") return !(r != 0);
@@ -116,37 +114,13 @@ int eval(AST* n) {
             else if (n->binop.op == "==") return l == r;
             else if (n->binop.op == "!=") return l != r;
             // Compound assignments
-            else if (n->binop.op == "&=") {
-                int val = l & r;
-               return assign(n->binop.left, val); // helper that writes into vars
-            }
-            else if (n->binop.op == "|=") {
-                int val = l | r;
-                return assign(n->binop.left, val);
-            }
-            else if (n->binop.op == "^=") {
-                int val = l ^ r;
-                return assign(n->binop.left, val);
-            }
-            else if (n->binop.op == "+="){
-                int val = l + r;
-                return assign(n->binop.left, val);
-            }
-            
-            else if (n->binop.op == "-="){
-                int val = l - r;
-                return assign(n->binop.left, val);
-            }
-            
-            else if (n->binop.op == "/="){
-                int val = l / r;
-                return assign(n->binop.left, val);
-            }
-
-            else if (n->binop.op == "*="){
-                int val = l * r;
-                return assign(n->binop.left, val);
-            }
+            else if (n->binop.op == "&=") { int val = l & r; return assign(n->binop.lhs, val);} // helper that writes into vars}
+            else if (n->binop.op == "|=") { int val = l | r; return assign(n->binop.lhs, val);}
+            else if (n->binop.op == "^=") { int val = l ^ r; return assign(n->binop.lhs, val);}
+            else if (n->binop.op == "+=") { int val = l + r; return assign(n->binop.lhs, val);}
+            else if (n->binop.op == "-=") { int val = l - r; return assign(n->binop.lhs, val);}
+            else if (n->binop.op == "/=") { int val = l / r; return assign(n->binop.lhs, val);}
+            else if (n->binop.op == "*=") { int val = l * r; return assign(n->binop.lhs, val);}
 
             printf("Unknown binop\n"); exit(1);
             }
@@ -156,7 +130,30 @@ int eval(AST* n) {
             set_var(n->assign.name, val);
             return val;
         }
+        case ASTType::AssignOp: {
+            int rhs_val = eval(n->assign_op.rhs);
+            int old_val = get_var(n->assign_op.name);
+            int result = 0;
+            switch(n->assign_op.op) {
+                case '+': result = old_val + rhs_val; break;
+                case '-': result = old_val - rhs_val; break;
+                case '*': result = old_val * rhs_val; break;
+                case '/': result = old_val / rhs_val; break;
+                case '&': result = old_val & rhs_val; break;
+                case '|': result = old_val | rhs_val; break;
+                case '^': result = old_val ^ rhs_val; break;
+            
+            }
+            set_var(n->assign_op.name, result);
+        return result;
+        }
 
+        case ASTType::IncDec: {
+            int old_val = get_var(n->incdec.name);
+            int result = (n->incdec.op == '+') ? old_val + 1 : old_val - 1;
+            set_var(n->incdec.name, result);
+            return result;
+        }
         case ASTType::Block: {
             push_scope();
             int result = 0;

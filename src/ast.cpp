@@ -25,8 +25,8 @@ AST* AST::make_binop(const std::string& op, AST* l, AST* r) {
     AST* n = new AST();
     n->type = ASTType::BinOp;
     n->binop.op = op;
-    n->binop.left = l;
-    n->binop.right = r;
+    n->binop.lhs = l;
+    n->binop.rhs = r;
     return n;
 }
 

@@ -11,8 +11,10 @@ enum class ASTType {
     Ident,
     BinOp,
     Assign,
-    If,
-    While,
+    AssignOp,
+    IncDec,
+    Check,
+    Recheck,
     Block,
 };
 
@@ -22,10 +24,12 @@ struct AST {
         // Values
         int value = 0;            // for number or char
         std::string name;         
-        struct { std::string op; AST* left = nullptr; AST* right = nullptr; } binop;
+        struct { std::string op; AST* lhs = nullptr; AST* rhs = nullptr; } binop;
         struct { std::string name; AST* expr = nullptr; } assign;
-        struct { AST* cond, *then_branch, *else_branch;} ifstmt;
-        struct { AST* cond; AST* body;} whilestmt;
+        struct { AST* cond, *ok_branch, *then_branch;} checkstmt;
+        struct { std::string name; AST* rhs; char op; } assign_op;
+        struct { std::string name; char op;  } incdec;
+        struct { AST* cond; AST* body;} recheckstmt;
         struct {std::vector<AST*> stmts; } block;
     };
     // Constructors
@@ -34,12 +38,13 @@ struct AST {
     static AST* make_ident(const std::string& name);
     static AST* make_binop(const std::string& op, AST* l, AST* r);
     static AST* make_assign(const std::string& name, AST* expr);
-    static AST* make_if(AST* cond, AST* then_branch, AST* else_branch = nullptr) {
+    
+    static AST* make_check(AST* cond, AST* ok_branch, AST* then_branch = nullptr) {
         AST* n = new AST();
-        n->type = ASTType::If;
-        n->ifstmt.cond = cond;
-        n->ifstmt.then_branch = then_branch;
-        n->ifstmt.else_branch = else_branch;
+        n->type = ASTType::Check;
+        n->checkstmt.cond = cond;
+        n->checkstmt.ok_branch = ok_branch;
+        n->checkstmt.then_branch = then_branch;
         return n;
     }
     static AST* make_block(const std::vector<AST*>& stmts) {
@@ -49,11 +54,28 @@ struct AST {
         return n;
     }
 
-   static AST* make_while(AST* cond, AST* body) {
+   static AST* make_recheck(AST* cond, AST* body) {
         AST* n = new AST;
-        n->type = ASTType::While;
-        n->whilestmt.cond = cond;
-        n->whilestmt.body = body;
+        n->type = ASTType::Recheck;
+        n->recheckstmt.cond = cond;
+        n->recheckstmt.body = body;
+        return n;
+    }
+
+   static AST* make_assign_op(const std::string& name, AST* rhs, char op) {
+        AST* n = new AST;
+        n->type = ASTType::AssignOp;
+        n->assign_op.name = name;
+        n->assign_op.rhs = rhs;
+        n->assign_op.op = op; // '+', '-', '*', '/'
+        return n;
+    }
+
+    static AST* make_incdec(const std::string& name, char op) {
+        AST* n = new AST;
+        n->type = ASTType::IncDec;
+        n->incdec.name = name;
+        n->incdec.op = op; // '+' for ++, '-' for --
         return n;
     }
 

@@ -2,6 +2,7 @@
 #define LEXER_HPP
 
 #include <string>
+#include <array>
 
 enum class TokenType {
     End,
@@ -19,12 +20,46 @@ enum class TokenType {
     
     BoolAnd, BoolOr,
     // keywords
-    KwInt, KwChar, KwBool, KwFloat, KwString,
-    KwIf, KwElse, KwWhile, KwReturn, KwTrue, KwFalse,
+    KwInt, KwShort, KwLong, KwChar, KwBool, KwFloat, KwDouble, KwString,
+    KwCheck, KwThen, KwRecheck,KwOn, KwReturn, KwTrue, KwFalse, KwLet, KwSubr,
 
     Assign, Semi, LParen, RParen,
     LBrace, RBrace
 };
+
+constexpr std::array<const char*, 58> token_type_names = {
+    "End",
+    "Number", "Char", "Bool", "Float", "String",
+    "Ident",
+    
+    // arithmetic
+    "Plus", "Minus", "Star", "Slash",
+    "PlusEq", "MinusEq", "StarEq", "SlashEq",
+    "Increment", "Decrement", "Pow",
+    
+    // bitwise
+    "Amp", "AmpEq", "Pipe", "PipeEq", "Caret", "CaretEq", "Tilde",
+
+    // logical/comparison
+    "Not", "Eq", "Lt", "Le", "Gt", "Ge", "EqEq", "NotEq",
+    "BoolAnd", "BoolOr",
+
+    // keywords
+    "KwInt","KwShort", "KwLong", "KwChar", "KwBool", "KwFloat","KwDouble", "KwString",
+    "KwCheck", "KwThen", "KwRecheck", "KwOn", "KwReturn",
+    "KwTrue", "KwFalse", "KwLet", "KwSubr",
+
+    // punctuation
+    "Assign", "Semi", "LParen", "RParen", "LBrace", "RBrace"
+};
+
+inline const char* token_type_to_string(TokenType type) {
+    auto index = static_cast<size_t>(type);
+    if (index >= token_type_names.size()) {
+        return "Unknown";
+    }
+    return token_type_names[index];
+}
 
 struct Token {
     TokenType type;
@@ -41,6 +76,6 @@ extern int pos;
 void reset_lexer(const std::string& input);
 Token get_next_token();
 void advance();
-
+void log_token(const Token& t);
 #endif
 

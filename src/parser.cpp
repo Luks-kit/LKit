@@ -9,7 +9,7 @@ void advance();
 
 // Forward declarations
 static AST* parse_expr();
-static AST* parse_if();
+static AST* parse_check();
 static AST* parse_comparison();
 static AST* parse_stmt();
 
@@ -23,7 +23,7 @@ static void expect(TokenType type) {
     advance();
 }
 
-AST* parse_while() {
+AST* parse_recheck() {
     advance(); // consume 'while'
 
     if (current.type != TokenType::LParen) { std::cerr << "Expected (\n"; exit(1);}
@@ -36,7 +36,7 @@ AST* parse_while() {
 
     AST* body = parse_stmt(); // single statement or a block
 
-    return AST::make_while(cond, body);
+    return AST::make_recheck(cond, body);
 }
 
 // Factor: numbers, chars, identifiers, parentheses
@@ -65,7 +65,7 @@ static AST* parse_factor() {
         advance(); // consume ')'
         return n;
     }
-    std::cerr << "Unexpected token in factor\n";
+    std::cerr << "Unexpected token in factor:" << current.lexeme << "\n";
     exit(1);
 }
 
@@ -101,12 +101,8 @@ AST* parse_term() {
 // Additive: + -
 AST* parse_additive() {
     AST* n = parse_term();
-    while ( current.type == TokenType::Plus || current.type == TokenType::Minus ||
-            current.type == TokenType::PlusEq || current.type == TokenType::MinusEq ||
-            current.type == TokenType::Increment || current.type == TokenType:: Decrement) {
-        std::string op = (current.type == TokenType::Plus) ? "+" :
-            (current.type == TokenType::Minus)? "-" :
-            (current.type == TokenType::PlusEq )? "+=" : "-=";
+    while ( current.type == TokenType::Plus || current.type == TokenType::Minus) {
+        std::string op = (current.type == TokenType::Plus) ? "+" : "-";
         advance();
         AST* right = parse_term();
         n = AST::make_binop(op, n, right);
@@ -141,7 +137,8 @@ static AST* parse_comparison() {
     AST* n = parse_bitwise_or();
     while (current.type == TokenType::Lt || current.type == TokenType::Gt ||
            current.type == TokenType::Le || current.type == TokenType::Ge ||
-           current.type == TokenType::EqEq || current.type == TokenType::NotEq)
+           current.type == TokenType::EqEq || current.type == TokenType::NotEq ||
+           current.type == TokenType::BoolAnd || current.type == TokenType::BoolOr)
     {
         std::string op;
         switch (current.type) {
@@ -151,6 +148,8 @@ static AST* parse_comparison() {
             case TokenType::Ge:    op = ">="; break;
             case TokenType::EqEq:  op = "=="; break;
             case TokenType::NotEq: op = "!="; break;
+            case TokenType::BoolAnd:op = "&&"; break;
+            case TokenType::BoolOr: op = "||"; break; 
             default: std::cerr << "Unknown comparison\n"; exit(1);
         }
         advance();
@@ -177,9 +176,9 @@ static AST* parse_block() {
 
 // Statement
 static AST* parse_stmt() {
-    if (current.type == TokenType::KwIf) return parse_if();
+    if (current.type == TokenType::KwCheck) return parse_check();
     if (current.type == TokenType::LBrace) { return parse_block();}
-    if (current.type == TokenType::KwWhile) {return parse_while();}
+    if (current.type == TokenType::KwRecheck) {return parse_recheck();}
     if (current.type == TokenType::Ident) {
         std::string name = current.lexeme;
         advance();
@@ -187,29 +186,48 @@ static AST* parse_stmt() {
             advance();
             AST* rhs = parse_expr(); // full precedence
             if (current.type != TokenType::Semi) { std::cerr << "Expected ; in parse_stmt\n"; exit(1); }
-            advance();
+            advance(); 
             return AST::make_assign(name, rhs);
         }
+        if(current.type == TokenType::PlusEq || current.type == TokenType::MinusEq ||
+        current.type == TokenType::StarEq || current.type == TokenType::SlashEq) {
+
+        char op = (current.type == TokenType::PlusEq) ? '+' :
+                  (current.type == TokenType::MinusEq) ? '-' :
+                  (current.type == TokenType::StarEq) ? '*' : '/';
+        advance(); 
+        AST* rhs = parse_expr();
+        expect(TokenType::Semi);
+        return AST::make_assign_op(name, rhs, op);
+        }  
+
+        if (current.type == TokenType::Increment || current.type == TokenType::Decrement) {
+        char op = (current.type == TokenType::Increment) ? '+' : '-';
+        advance();
+        expect(TokenType::Semi);
+        return AST::make_incdec(name, op);
+    }
+
     }
     std::cerr << "Invalid statement\n";
     exit(1);
 }
 
 // If statement
-AST* parse_if() {
+AST* parse_check() {
     advance(); // consume 'if'
-    if (current.type != TokenType::LParen) { std::cerr << "Expected ( in parse_if\n"; exit(1);}
+    if (current.type != TokenType::LParen) { std::cerr << "Expected ( in parse_check\n"; exit(1);}
     advance(); // consume '('
     AST* cond = parse_expr();
-    if (current.type != TokenType::RParen) { std::cerr << "Expected ) in parse_if\n"; exit(1);}
+    if (current.type != TokenType::RParen) { std::cerr << "Expected ) in parse_check\n"; exit(1);}
     advance(); // consume ')'
     AST* then_branch = parse_stmt();
     AST* else_branch = nullptr;
-    if (current.type == TokenType::KwElse) {
+    if (current.type == TokenType::KwThen) {
         advance();
         else_branch = parse_stmt();
     }
-    return AST::make_if(cond, then_branch, else_branch);
+    return AST::make_check(cond, then_branch, else_branch);
 }
 
 // Entry point

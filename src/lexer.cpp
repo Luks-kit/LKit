@@ -18,6 +18,9 @@ static bool is_ident_char(char c) {
     return isalnum(c) || c == '_';
 }
 
+void log_token(const Token& tok) { std::cerr << "Token: " << tok.lexeme 
+          << " type=" << token_type_to_string(tok.type) << "\n"; }
+
 void reset_lexer(const std::string& input) {
     src = input;
     pos = 0;
@@ -49,21 +52,27 @@ Token get_next_token() {
             ident.push_back(src[pos++]);
         }
         if (ident == "int") return {TokenType::KwInt, 0, ident};
+        if (ident == "short") return {TokenType::KwShort, 0, ident};
+        if (ident == "long") return {TokenType::KwLong, 0, ident};
         if (ident == "char") return {TokenType::KwChar, 0, ident};
         if (ident == "bool") return {TokenType::KwBool, 0, ident};
         if (ident == "float") return {TokenType::KwFloat, 0, ident};
+        if (ident == "double") return {TokenType::KwDouble, 0, ident};
         if (ident == "string") return {TokenType::KwString, 0, ident};
-        if (ident == "check") return {TokenType::KwIf, 0, ident};
-        if (ident == "then") return {TokenType::KwElse, 0, ident};
-        if (ident == "recheck") return {TokenType::KwWhile, 0, ident};
+        if (ident == "check") return {TokenType::KwCheck, 0, ident};
+        if (ident == "then") return {TokenType::KwThen, 0, ident};
+        if (ident == "on") return {TokenType::KwOn, 0, ident};
+        if (ident == "recheck") return {TokenType::KwRecheck, 0, ident};
         if (ident == "return") return {TokenType::KwReturn, 0, ident};
         if (ident == "true") return {TokenType::KwTrue, 1, ident};
         if (ident == "false") return {TokenType::KwFalse, 0, ident};
+        if (ident == "let") return {TokenType::KwLet, 0, ident};
+        if (ident == "subr") return {TokenType::KwSubr, 0 , ident};
+
         return {TokenType::Ident, 0, ident};
     }
 
     // single char tokens
-    pos++;
     switch (c) {
         case '+': {
             pos++;
@@ -134,6 +143,7 @@ Token get_next_token() {
             return Token{TokenType::Pipe, 0, "|"};
             }
         case '^': {
+            pos++;
             if (pos < src.size() && src[pos] == '=') {
                 pos++;
                 return Token{TokenType::CaretEq, 0, "^="};
@@ -142,13 +152,15 @@ Token get_next_token() {
         }
         case '~': return {TokenType::Tilde, 0, std::string(1,'~')};
         case '<': {
+            pos++;
             if (pos < src.size() && src[pos] == '=') {
                 pos++;
                 return Token{TokenType::Le, 0, "<="};
             }
             return Token{TokenType::Lt, 0, "<"};
         }
-        case '>': { 
+        case '>': {
+            pos++;
             if (pos < src.size() && src[pos] == '=') {
                 pos++;
                 return Token{TokenType::Ge, 0, ">="};
@@ -156,6 +168,7 @@ Token get_next_token() {
             return Token{TokenType::Gt, 0, ">"};
         }
         case '=': {
+            pos++;
              if (pos < src.size() && src[pos] == '=') {
                 pos++;
                 return Token{TokenType::EqEq, 0, "=="};
@@ -171,11 +184,11 @@ Token get_next_token() {
             return Token{TokenType::Not, 0, "!"};
         }
 
-        case ';': return {TokenType::Semi, 0, std::string(1, ';')};
-        case '(': return {TokenType::LParen, 0, std::string(1, '(')};
-        case ')': return {TokenType::RParen, 0, std::string(1, ')')};
-        case '{': return {TokenType::LBrace, 0, std::string(1, '{')};
-        case '}': return {TokenType::RBrace, 0, std::string(1, '}')};
+        case ';': { pos++; return {TokenType::Semi, 0, std::string(1, ';')}; }
+        case '(': { pos++; return {TokenType::LParen, 0, std::string(1, '(')}; }
+        case ')': { pos++; return {TokenType::RParen, 0, std::string(1, ')')}; }
+        case '{': { pos++; return {TokenType::LBrace, 0, std::string(1, '{')}; }
+        case '}': { pos++; return {TokenType::RBrace, 0, std::string(1, '}')}; }
 }
     
     std::cerr << "Unknown character: " << c << "\n";
@@ -183,6 +196,6 @@ Token get_next_token() {
 }
 
 void advance() {
-    current = get_next_token();
+  log_token(current); current = get_next_token();
 }
 
