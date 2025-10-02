@@ -68,6 +68,19 @@ struct Token {
     std::string lexeme;
 };
 
+struct Lexer {
+    Token current;
+    std::string src;
+    int pos;
+    
+
+    std::string map_token(const Token& t);
+    void reset_lexer(const std::string& input);
+    Token next_token();
+    void log_token(const Token& t);
+    
+}
+
 // shared globals
 extern Token current;
 extern std::string src;
