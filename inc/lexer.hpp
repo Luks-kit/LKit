@@ -79,7 +79,7 @@ struct Lexer {
     Token next_token();
     void log_token(const Token& t);
     
-}
+};
 
 // shared globals
 extern Token current;
