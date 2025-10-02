@@ -71,7 +71,7 @@ struct Token {
 struct Lexer {
     Token current;
     std::string src;
-    int pos;
+    size_t pos;
     
 
     std::string map_token(const Token& t);
@@ -84,7 +84,7 @@ struct Lexer {
 // shared globals
 extern Token current;
 extern std::string src;
-extern int pos;
+extern size_t pos;
 
 // lexer functions
 void reset_lexer(const std::string& input);
