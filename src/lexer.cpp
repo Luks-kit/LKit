@@ -19,7 +19,7 @@ static bool is_ident_char(char c) {
 }
 
 void log_token(const Token& tok) { std::cerr << "Token: " << tok.lexeme 
-          << " type=" << token_type_to_string(tok.type) << "\n"; }
+          << " type=" << token_type_to_string(tok.type) << std::endl; }
 
 void reset_lexer(const std::string& input) {
     src = input;
@@ -42,7 +42,18 @@ Token get_next_token() {
             val = val * 10 + (src[pos] - '0');
             pos++;
         }
-        return {TokenType::Number, val, ""};
+        return Token {TokenType::Number, val, ""};
+    }
+    
+    // characters
+    if (c == '\'') {
+        char val = '\0';
+
+        while(pos < (int)src.size() && src[pos] != '\''){
+        val = src[++pos];
+        pos++;
+           }
+        return Token{TokenType::Char, val, ""};
     }
 
     // identifiers / keywords
@@ -51,14 +62,15 @@ Token get_next_token() {
         while (pos < (int)src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
         }
-        if (ident == "int") return {TokenType::KwInt, 0, ident};
-        if (ident == "short") return {TokenType::KwShort, 0, ident};
-        if (ident == "long") return {TokenType::KwLong, 0, ident};
-        if (ident == "char") return {TokenType::KwChar, 0, ident};
-        if (ident == "bool") return {TokenType::KwBool, 0, ident};
-        if (ident == "float") return {TokenType::KwFloat, 0, ident};
-        if (ident == "double") return {TokenType::KwDouble, 0, ident};
-        if (ident == "string") return {TokenType::KwString, 0, ident};
+        if (ident == "int") return {TokenType::KwType, 0, ident};
+        if (ident == "short") return {TokenType::KwType, 0, ident};
+        if (ident == "long") return {TokenType::KwType, 0, ident};
+        if (ident == "char") return {TokenType::KwType, 0, ident};
+        if (ident == "bool") return {TokenType::KwType, 0, ident};
+        if (ident == "float") return {TokenType::KwType, 0, ident};
+        if (ident == "double") return {TokenType::KwType, 0, ident};
+        if (ident == "string") return {TokenType::KwType, 0, ident};
+        if (ident == "const") return {TokenType::KwConst, 0, ident};
         if (ident == "check") return {TokenType::KwCheck, 0, ident};
         if (ident == "then") return {TokenType::KwThen, 0, ident};
         if (ident == "on") return {TokenType::KwOn, 0, ident};

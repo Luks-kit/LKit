@@ -6,7 +6,7 @@
 
 enum class TokenType {
     End,
-    Number, Char, Bool, Float, String,
+    Number, Char, Bool, Float, String, KwType,
     Ident,
 
     // arithmetic
@@ -21,15 +21,16 @@ enum class TokenType {
     BoolAnd, BoolOr,
     // keywords
     KwInt, KwShort, KwLong, KwChar, KwBool, KwFloat, KwDouble, KwString,
-    KwCheck, KwThen, KwRecheck,KwOn, KwReturn, KwTrue, KwFalse, KwLet, KwSubr,
+    KwCheck, KwThen, KwRecheck,KwOn, KwReturn, KwConst,
+    KwTrue, KwFalse, KwLet, KwSubr,
 
     Assign, Semi, LParen, RParen,
     LBrace, RBrace
 };
 
-constexpr std::array<const char*, 58> token_type_names = {
+constexpr std::array<const char*, 60> token_type_names = {
     "End",
-    "Number", "Char", "Bool", "Float", "String",
+    "Number", "Char", "Bool", "Float", "String","KwType",
     "Ident",
     
     // arithmetic
@@ -46,7 +47,7 @@ constexpr std::array<const char*, 58> token_type_names = {
 
     // keywords
     "KwInt","KwShort", "KwLong", "KwChar", "KwBool", "KwFloat","KwDouble", "KwString",
-    "KwCheck", "KwThen", "KwRecheck", "KwOn", "KwReturn",
+    "KwCheck", "KwThen", "KwRecheck", "KwOn", "KwReturn", "KwConst",
     "KwTrue", "KwFalse", "KwLet", "KwSubr",
 
     // punctuation

@@ -23,6 +23,14 @@ static void expect(TokenType type) {
     advance();
 }
 
+static void light_expect(TokenType type) {
+    if (current.type != type) {
+        std::cerr << "Expected token " << token_type_to_string (type) 
+            << "but got token" << token_type_to_string(current.type) << "\n";
+        exit(1);
+    }
+}
+
 AST* parse_recheck() {
     advance(); // consume 'while'
 
@@ -179,13 +187,30 @@ static AST* parse_stmt() {
     if (current.type == TokenType::KwCheck) return parse_check();
     if (current.type == TokenType::LBrace) { return parse_block();}
     if (current.type == TokenType::KwRecheck) {return parse_recheck();}
+    if (current.type == TokenType::KwLet) {
+        advance();
+        light_expect(TokenType::Ident);
+        std::string name = current.lexeme;
+        advance();
+        
+        if (current.type == TokenType::Eq) {
+            advance();
+            AST* rhs = parse_expr();
+            expect(TokenType::Semi);
+            return AST::make_decl(name, rhs); 
+        } else if (current.type == TokenType::Semi) {
+            advance();
+            return AST::make_decl(name, AST::make_number(0));
+        }
+    }
+
     if (current.type == TokenType::Ident) {
         std::string name = current.lexeme;
         advance();
         if (current.type == TokenType::Eq) {
             advance();
             AST* rhs = parse_expr(); // full precedence
-            if (current.type != TokenType::Semi) { std::cerr << "Expected ; in parse_stmt\n"; exit(1); }
+            expect(TokenType::Semi);
             advance(); 
             return AST::make_assign(name, rhs);
         }
@@ -206,9 +231,10 @@ static AST* parse_stmt() {
         advance();
         expect(TokenType::Semi);
         return AST::make_incdec(name, op);
-    }
+        }
 
-    }
+        }
+    
     std::cerr << "Invalid statement\n";
     exit(1);
 }

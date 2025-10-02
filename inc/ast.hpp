@@ -3,7 +3,34 @@
 
 #include <string>
 #include <vector>
+#include <variant>
+#include <memory>
 
+struct AST; // forward declaration
+
+using ASTPtr = AST*;
+
+struct BinOp { std::string op; ASTPtr lhs = nullptr; ASTPtr rhs = nullptr; };
+struct Assign { std::string name; ASTPtr expr = nullptr; };
+struct Decl {std::string name; ASTPtr expr = nullptr; };
+struct AssignOp { std::string name; ASTPtr rhs = nullptr; char op; };
+struct IncDec { std::string name; char op; };
+struct Check { ASTPtr cond; ASTPtr ok_branch; ASTPtr then_branch = nullptr; };
+struct Recheck { ASTPtr cond; ASTPtr body; };
+struct Block { std::vector<ASTPtr> stmts; };
+
+using ASTValue = std::variant<
+    int,           // Number or Char
+    std::string,   // Ident
+    BinOp,
+    Assign,
+    Decl,
+    AssignOp,
+    IncDec,
+    Check,
+    Recheck,
+    Block
+>;
 
 enum class ASTType {
     Number,
@@ -11,6 +38,7 @@ enum class ASTType {
     Ident,
     BinOp,
     Assign,
+    Decl,
     AssignOp,
     IncDec,
     Check,
@@ -20,64 +48,62 @@ enum class ASTType {
 
 struct AST {
     ASTType type;
-    union{
-        // Values
-        int value = 0;            // for number or char
-        std::string name;         
-        struct { std::string op; AST* lhs = nullptr; AST* rhs = nullptr; } binop;
-        struct { std::string name; AST* expr = nullptr; } assign;
-        struct { AST* cond, *ok_branch, *then_branch;} checkstmt;
-        struct { std::string name; AST* rhs; char op; } assign_op;
-        struct { std::string name; char op;  } incdec;
-        struct { AST* cond; AST* body;} recheckstmt;
-        struct {std::vector<AST*> stmts; } block;
-    };
-    // Constructors
-    static AST* make_number(int v);
-    static AST* make_char(int v);
-    static AST* make_ident(const std::string& name);
-    static AST* make_binop(const std::string& op, AST* l, AST* r);
-    static AST* make_assign(const std::string& name, AST* expr);
-    
-    static AST* make_check(AST* cond, AST* ok_branch, AST* then_branch = nullptr) {
-        AST* n = new AST();
-        n->type = ASTType::Check;
-        n->checkstmt.cond = cond;
-        n->checkstmt.ok_branch = ok_branch;
-        n->checkstmt.then_branch = then_branch;
-        return n;
-    }
-    static AST* make_block(const std::vector<AST*>& stmts) {
-        AST* n = new AST();
-        n->type = ASTType::Block;
-        n->block.stmts = stmts;
-        return n;
+    ASTValue value;
+
+    // Factory functions
+    static AST* make_number(int v) {
+        return new AST{ASTType::Number, v};
     }
 
-   static AST* make_recheck(AST* cond, AST* body) {
-        AST* n = new AST;
-        n->type = ASTType::Recheck;
-        n->recheckstmt.cond = cond;
-        n->recheckstmt.body = body;
-        return n;
+    static AST* make_char(int v) {
+        return new AST{ASTType::Char, v};
     }
 
-   static AST* make_assign_op(const std::string& name, AST* rhs, char op) {
-        AST* n = new AST;
-        n->type = ASTType::AssignOp;
-        n->assign_op.name = name;
-        n->assign_op.rhs = rhs;
-        n->assign_op.op = op; // '+', '-', '*', '/'
-        return n;
+    static AST* make_ident(const std::string& name) {
+        return new AST{ASTType::Ident, name};
+    }
+
+    static AST* make_binop(const std::string& op, AST* lhs, AST* rhs) {
+        return new AST{ASTType::BinOp, BinOp{op, lhs, rhs}};
+    }
+
+    static AST* make_assign(const std::string& name, AST* expr) {
+        return new AST{ASTType::Assign, Assign{name, expr}};
+    }
+    static AST* make_decl(const std::string& name, AST* expr) {
+        return new AST{ASTType::Decl, Decl{name, expr}};
+    }
+
+    static AST* make_assign_op(const std::string& name, AST* rhs, char op) {
+        return new AST{ASTType::AssignOp, AssignOp{name, rhs, op}};
     }
 
     static AST* make_incdec(const std::string& name, char op) {
-        AST* n = new AST;
-        n->type = ASTType::IncDec;
-        n->incdec.name = name;
-        n->incdec.op = op; // '+' for ++, '-' for --
-        return n;
+        return new AST{ASTType::IncDec, IncDec{name, op}};
     }
+
+    static AST* make_check(AST* cond, AST* ok_branch, AST* then_branch = nullptr) {
+        return new AST{ASTType::Check, Check{cond, ok_branch, then_branch}};
+    }
+
+    static AST* make_recheck(AST* cond, AST* body) {
+        return new AST{ASTType::Recheck, Recheck{cond, body}};
+    }
+
+    static AST* make_block(const std::vector<AST*>& stmts) {
+        return new AST{ASTType::Block, Block{stmts}};
+    }
+    
+     int as_int() const { return std::get<int>(value); }
+    const std::string& as_string() const { return std::get<std::string>(value); }
+    BinOp& as_binop() { return std::get<BinOp>(value); }
+    Assign& as_assign() { return std::get<Assign>(value); }
+    Decl& as_decl() {return std::get<Decl>(value); }
+    AssignOp& as_assign_op() { return std::get<AssignOp>(value); }
+    IncDec& as_incdec() { return std::get<IncDec>(value); }
+    Check& as_check() { return std::get<Check>(value); }
+    Recheck& as_recheck() { return std::get<Recheck>(value); }
+    Block& as_block() { return std::get<Block>(value); }
 
 };
 
