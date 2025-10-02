@@ -4,7 +4,7 @@
 
 Token current;
 std::string src;
-int pos = 0;
+size_t pos = 0;
 
 static void skip_whitespace() {
     while (pos < (int)src.size() && isspace(src[pos])) pos++;
