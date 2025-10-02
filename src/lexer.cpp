@@ -7,7 +7,7 @@ std::string src;
 size_t pos = 0;
 
 static void skip_whitespace() {
-    while (pos < (int)src.size() && isspace(src[pos])) pos++;
+    while (pos < src.size() && isspace(src[pos])) pos++;
 }
 
 static bool is_ident_start(char c) {
@@ -29,7 +29,7 @@ void reset_lexer(const std::string& input) {
 
 Token get_next_token() {
     skip_whitespace();
-    if (pos >= (int)src.size()) {
+    if (pos >= src.size()) {
         return {TokenType::End, 0, ""};
     }
 
@@ -38,7 +38,7 @@ Token get_next_token() {
     // numbers
     if (isdigit(c)) {
         int val = 0;
-        while (pos < (int)src.size() && isdigit(src[pos])) {
+        while (pos < src.size() && isdigit(src[pos])) {
             val = val * 10 + (src[pos] - '0');
             pos++;
         }
@@ -49,7 +49,7 @@ Token get_next_token() {
     if (c == '\'') {
         char val = '\0';
 
-        while(pos < (int)src.size() && src[pos] != '\''){
+        while(pos < src.size() && src[pos] != '\''){
         val = src[++pos];
         pos++;
            }
@@ -59,7 +59,7 @@ Token get_next_token() {
     // identifiers / keywords
     if (is_ident_start(c)) {
         std::string ident;
-        while (pos < (int)src.size() && is_ident_char(src[pos])) {
+        while (pos < src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
         }
         if (ident == "int") return {TokenType::KwType, 0, ident};
