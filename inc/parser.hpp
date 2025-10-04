@@ -4,6 +4,7 @@
 #include "stmt.hpp"
 #include "decl.hpp"
 #include "lexer.hpp"
+#include "ast.hpp"
 #include <memory>
 
 class Parser {
