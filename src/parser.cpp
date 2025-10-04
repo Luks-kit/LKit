@@ -4,152 +4,143 @@
 #include <cstdlib>
 #include <string>
 
-extern Token current;
-void advance();
-
 // Forward declarations
-static AST* parse_expr();
-static AST* parse_check();
-static AST* parse_comparison();
-static AST* parse_stmt();
+static AST* parse_expr(Lexer& lex);
+static AST* parse_check(Lexer& lex);
+static AST* parse_comparison(Lexer& lex);
+static AST* parse_stmt(Lexer& lex);
 
 
-static void expect(TokenType type) {
-    if (current.type != type) {
-        std::cerr << "Expected token " << (int)type 
-                  << " but got " << (int)current.type << "\n";
+static void expect(Lexer& lex, TokenType type) {
+    if (lex.current.type != type) {
+        std::cerr << "Expected token " << token_type_to_string(type) 
+                  << " but got " << token_type_to_string(lex.current.type) << "\n";
         exit(1);
     }
-    advance();
+    lex.advance();
 }
 
-static void light_expect(TokenType type) {
-    if (current.type != type) {
+static void light_expect(Lexer& lex, TokenType type) {
+    if (lex.current.type != type) {
         std::cerr << "Expected token " << token_type_to_string (type) 
-            << "but got token" << token_type_to_string(current.type) << "\n";
+            << " but got token " << token_type_to_string(lex.current.type) << "\n";
         exit(1);
     }
 }
 
-AST* parse_recheck() {
-    advance(); // consume 'while'
-
-    if (current.type != TokenType::LParen) { std::cerr << "Expected (\n"; exit(1);}
-    advance();
-
-    AST* cond = parse_comparison(); // condition uses full precedence
-
-    if (current.type != TokenType::RParen) { std::cerr << "Expected )\n"; exit(1);}
-    advance();
-
-    AST* body = parse_stmt(); // single statement or a block
+AST* parse_recheck(Lexer& lex) {
+    lex.advance(); // consume 'while'
+    expect(lex, TokenType::LParen);
+    AST* cond = parse_comparison(lex); // condition uses full precedence
+    
+    expect(lex, TokenType::RParen);
+    AST* body = parse_stmt(lex); // single statement or a block
 
     return AST::make_recheck(cond, body);
 }
 
 // Factor: numbers, chars, identifiers, parentheses
-static AST* parse_factor() {
-    if (current.type == TokenType::Number) {
-        AST* n = AST::make_number(current.value);
-        advance();
+static AST* parse_factor(Lexer& lex) {
+    if (lex.current.type == TokenType::Number) {
+        AST* n = AST::make_number(lex.current.value);
+        lex.advance();
         return n;
     }
-    if (current.type == TokenType::Char) {
-        AST* n = AST::make_char(current.value);
-        advance();
+    if (lex.current.type == TokenType::Char) {
+        AST* n = AST::make_char(lex.current.value);
+        lex.advance();
         return n;
     }
-    if (current.type == TokenType::Ident) {
-        AST* n = AST::make_ident(current.lexeme);
-        advance();
+    if (lex.current.type == TokenType::Ident) {
+        AST* n = AST::make_ident(lex.current.lexeme);
+        lex.advance();
         return n;
     }
-    if (current.type == TokenType::LParen) {
-        advance(); // consume '('
-        AST* n = parse_expr(); // full precedence
-        if (current.type != TokenType::RParen) {
+    if (lex.current.type == TokenType::LParen) {
+        lex.advance(); // consume '('
+        AST* n = parse_expr(lex); // full precedence
+        if (lex.current.type != TokenType::RParen) {
             std::cerr << "Expected ) in parse_factor\n"; exit(1);
         }
-        advance(); // consume ')'
+        lex.advance(); // consume ')'
         return n;
     }
-    std::cerr << "Unexpected token in factor:" << current.lexeme << "\n";
+    std::cerr << "Unexpected token in factor:" << lex.current.lexeme << "\n";
     exit(1);
 }
 
 // Unary operators: ~ (bitwise NOT), - (negation)
-AST* parse_unary() {
-    if (current.type == TokenType::Tilde) {
-        advance();
-        AST* expr = parse_unary();
+AST* parse_unary(Lexer& lex) {
+    if (lex.current.type == TokenType::Tilde) {
+        lex.advance();
+        AST* expr = parse_unary(lex);
         return AST::make_binop("~", nullptr, expr);
     }
-    if (current.type == TokenType::Minus) {
-        advance();
-        AST* expr = parse_unary();
+    if (lex.current.type == TokenType::Minus) {
+        lex.advance();
+        AST* expr = parse_unary(lex);
         return AST::make_binop("neg", nullptr, expr);
     }
-    
 
-    return parse_factor();
+    return parse_factor(lex);
 }
 
 // Term: * /
-AST* parse_term() {
-    AST* n = parse_unary();
-    while (current.type == TokenType::Star || current.type == TokenType::Slash) {
-        std::string op = (current.type == TokenType::Star) ? "*" : "/";
-        advance();
-        AST* right = parse_unary();
+AST* parse_term(Lexer& lex) {
+    AST* n = parse_unary(lex);
+    while (lex.current.type == TokenType::Star || lex.current.type == TokenType::Slash) {
+        std::string op = (lex.current.type == TokenType::Star) ? "*" : "/";
+        lex.advance();
+        AST* right = parse_unary(lex);
         n = AST::make_binop(op, n, right);
     }
     return n;
 }
 
 // Additive: + -
-AST* parse_additive() {
-    AST* n = parse_term();
-    while ( current.type == TokenType::Plus || current.type == TokenType::Minus) {
-        std::string op = (current.type == TokenType::Plus) ? "+" : "-";
-        advance();
-        AST* right = parse_term();
+AST* parse_additive(Lexer& lex) {
+    AST* n = parse_term(lex);
+    while ( lex.current.type == TokenType::Plus || lex.current.type == TokenType::Minus) {
+        std::string op = (lex.current.type == TokenType::Plus) ? "+" : "-";
+        lex.advance();
+        AST* right = parse_term(lex);
         n = AST::make_binop(op, n, right);
     }
     return n;
 }
 
 // Bitwise AND: &
-AST* parse_bitwise_and() {
-    AST* n = parse_additive();
-    while (current.type == TokenType::Amp) {
-        advance();
-        AST* right = parse_additive();
+AST* parse_bitwise_and(Lexer& lex) {
+    AST* n = parse_additive(lex);
+    while (lex.current.type == TokenType::Amp) {
+        lex.advance();
+        AST* right = parse_additive(lex);
         n = AST::make_binop("&", n, right);
     }
     return n;
 }
 
 // Bitwise OR: |
-AST* parse_bitwise_or() {
-    AST* n = parse_bitwise_and();
-    while (current.type == TokenType::Pipe) {
-        advance();
-        AST* right = parse_bitwise_and();
+AST* parse_bitwise_or(Lexer& lex) {
+    AST* n = parse_bitwise_and(lex);
+    while (lex.current.type == TokenType::Pipe) {
+        lex.advance();
+        AST* right = parse_bitwise_and(lex);
         n = AST::make_binop("|", n, right);
     }
     return n;
 }
 
 // Comparison: < > <= >= == !=
-static AST* parse_comparison() {
-    AST* n = parse_bitwise_or();
-    while (current.type == TokenType::Lt || current.type == TokenType::Gt ||
-           current.type == TokenType::Le || current.type == TokenType::Ge ||
-           current.type == TokenType::EqEq || current.type == TokenType::NotEq ||
-           current.type == TokenType::BoolAnd || current.type == TokenType::BoolOr)
+static AST* parse_comparison(Lexer& lex) {
+    AST* n = parse_bitwise_or(lex);
+    while ( lex.current.type == TokenType::Lt || lex.current.type == TokenType::Gt ||
+           lex.current.type == TokenType::Le || lex.current.type == TokenType::Ge ||
+           lex.current.type == TokenType::EqEq || lex.current.type == TokenType::NotEq ||
+           lex.current.type == TokenType::BoolAnd || lex.current.type == TokenType::BoolOr)
     {
         std::string op;
-        switch (current.type) {
+        switch (lex.current.type) {
             case TokenType::Lt:    op = "<"; break;
             case TokenType::Gt:    op = ">"; break;
             case TokenType::Le:    op = "<="; break;
@@ -160,104 +151,108 @@ static AST* parse_comparison() {
             case TokenType::BoolOr: op = "||"; break; 
             default: std::cerr << "Unknown comparison\n"; exit(1);
         }
-        advance();
-        AST* right = parse_bitwise_or();
+        lex.advance();
+        AST* right = parse_bitwise_or(lex);
         n = AST::make_binop(op, n, right);
     }
     return n;
 }
 
 // Full expression
-AST* parse_expr() {
-    return parse_comparison();
+AST* parse_expr(Lexer& lex) {
+    return parse_comparison(lex);
 }
 
-static AST* parse_block() {
-    expect(TokenType::LBrace);
+static AST* parse_block(Lexer& lex) {
+    expect(lex, TokenType::LBrace);
     std::vector<AST*> stmts;
-    while (current.type != TokenType::RBrace && current.type != TokenType::End) {
-        stmts.push_back(parse_stmt());
+    while (lex.current.type != TokenType::RBrace && lex.current.type != TokenType::End) {
+        stmts.push_back(parse_stmt(lex));
     }
-    expect(TokenType::RBrace);
+   
     return AST::make_block(stmts);
 }
 
-// Statement
-static AST* parse_stmt() {
-    if (current.type == TokenType::KwCheck) return parse_check();
-    if (current.type == TokenType::LBrace) { return parse_block();}
-    if (current.type == TokenType::KwRecheck) {return parse_recheck();}
-    if (current.type == TokenType::KwLet) {
-        advance();
-        light_expect(TokenType::Ident);
-        std::string name = current.lexeme;
-        advance();
-        
-        if (current.type == TokenType::Eq) {
-            advance();
-            AST* rhs = parse_expr();
-            expect(TokenType::Semi);
-            return AST::make_decl(name, rhs); 
-        } else if (current.type == TokenType::Semi) {
-            advance();
-            return AST::make_decl(name, AST::make_number(0));
-        }
-    }
-
-    if (current.type == TokenType::Ident) {
-        std::string name = current.lexeme;
-        advance();
-        if (current.type == TokenType::Eq) {
-            advance();
-            AST* rhs = parse_expr(); // full precedence
-            expect(TokenType::Semi);
-            advance(); 
+static AST* parse_assign (Lexer& lex) {
+        std::string name = lex.current.lexeme;
+        lex.advance();
+        if (lex.current.type == TokenType::Eq) {
+            lex.advance();
+            AST* rhs = parse_expr(lex); // full precedence
+            expect(lex, TokenType::Semi);
+            lex.advance(); 
             return AST::make_assign(name, rhs);
         }
-        if(current.type == TokenType::PlusEq || current.type == TokenType::MinusEq ||
-        current.type == TokenType::StarEq || current.type == TokenType::SlashEq) {
+        if(lex.current.type == TokenType::PlusEq || lex.current.type == TokenType::MinusEq ||
+        lex.current.type == TokenType::StarEq || lex.current.type == TokenType::SlashEq) {
 
-        char op = (current.type == TokenType::PlusEq) ? '+' :
-                  (current.type == TokenType::MinusEq) ? '-' :
-                  (current.type == TokenType::StarEq) ? '*' : '/';
-        advance(); 
-        AST* rhs = parse_expr();
-        expect(TokenType::Semi);
+        char op = (lex.current.type == TokenType::PlusEq) ? '+' :
+                  (lex.current.type == TokenType::MinusEq) ? '-' :
+                  (lex.current.type == TokenType::StarEq) ? '*' : '/';
+        lex.advance(); 
+        AST* rhs = parse_expr(lex);
+        expect(lex, TokenType::Semi);
         return AST::make_assign_op(name, rhs, op);
         }  
 
-        if (current.type == TokenType::Increment || current.type == TokenType::Decrement) {
-        char op = (current.type == TokenType::Increment) ? '+' : '-';
-        advance();
-        expect(TokenType::Semi);
+        if (lex.current.type == TokenType::Increment || lex.current.type == TokenType::Decrement) {
+        char op = (lex.current.type == TokenType::Increment) ? '+' : '-';
+        lex.advance();
+        expect(lex, TokenType::Semi);
         return AST::make_incdec(name, op);
-        }
+        }    
+        
 
-        }
+}
+
+static AST* parse_decl(Lexer& lex){
+    lex.advance();
+    light_expect(lex, TokenType::Ident);
+    std::string name = lex.current.lexeme;
+    lex.advance();
+        
+    if (lex.current.type == TokenType::Eq) {
+        lex.advance();
+        AST* rhs = parse_expr(lex);
+        expect(lex, TokenType::Semi);
+        return AST::make_decl(name, rhs); 
+    } else if (lex.current.type == TokenType::Semi) {
+        lex.advance();
+        return AST::make_decl(name, AST::make_number(0));
+    }
+}
+
+// Statement
+static AST* parse_stmt(Lexer& lex) {
+    if (lex.current.type == TokenType::KwCheck) return parse_check(lex);
+    if (lex.current.type == TokenType::LBrace) { return parse_block(lex);}
+    if (lex.current.type == TokenType::KwRecheck) {return parse_recheck(lex);}
+    if (lex.current.type == TokenType::KwLet) { return parse_decl(lex); }
+    if (lex.current.type == TokenType::Ident) { return parse_assign(lex);}
     
     std::cerr << "Invalid statement\n";
     exit(1);
 }
 
 // If statement
-AST* parse_check() {
-    advance(); // consume 'if'
-    if (current.type != TokenType::LParen) { std::cerr << "Expected ( in parse_check\n"; exit(1);}
-    advance(); // consume '('
-    AST* cond = parse_expr();
-    if (current.type != TokenType::RParen) { std::cerr << "Expected ) in parse_check\n"; exit(1);}
-    advance(); // consume ')'
-    AST* then_branch = parse_stmt();
+AST* parse_check(Lexer& lex) {
+    lex.advance(); // consume 'if'
+    if (lex.current.type != TokenType::LParen) { std::cerr << "Expected ( in parse_check\n"; exit(1);}
+    lex.advance(); // consume '('
+    AST* cond = parse_expr(lex);
+    if (lex.current.type != TokenType::RParen) { std::cerr << "Expected ) in parse_check\n"; exit(1);}
+    lex.advance(); // consume ')'
+    AST* then_branch = parse_stmt(lex);
     AST* else_branch = nullptr;
-    if (current.type == TokenType::KwThen) {
-        advance();
-        else_branch = parse_stmt();
+    if (lex.current.type == TokenType::KwThen) {
+        lex.advance();
+        else_branch = parse_stmt(lex);
     }
     return AST::make_check(cond, then_branch, else_branch);
 }
 
 // Entry point
-AST* parse() {
-    return parse_stmt();
+AST* parse(Lexer& lex) {
+    return parse_stmt(lex);
 }
 

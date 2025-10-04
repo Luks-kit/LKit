@@ -1,8 +1,10 @@
-#ifndef LEXER_HPP
-#define LEXER_HPP
+#pragma once
 
 #include <string>
 #include <array>
+#include <cctype>
+#include <iostream>
+#include <optional>
 
 enum class TokenType {
     End,
@@ -69,27 +71,39 @@ struct Token {
 };
 
 struct Lexer {
-    Token current;
     std::string src;
-    size_t pos;
-    
+    size_t pos = 0;
+    Token current;
 
-    std::string map_token(const Token& t);
-    void reset_lexer(const std::string& input);
-    Token next_token();
-    void log_token(const Token& t);
-    
+    Lexer(const std::string& input) : src(input), pos(0) {
+        current = get_next_token();
+    }
+    Lexer () {}
+    Token get_next_token();
+
+    void reset_lexer(const std::string& input) { src.clear(); src = input; std::cout << src; pos = 0; current = get_next_token(); }
+        
+    std::optional<Token> op_check();
+
+    void log_token(const Token& tok) {
+        std::cerr << "Token: " << tok.lexeme
+                  << " type=" << token_type_to_string(tok.type) << std::endl;
+    }
+
+    void advance() {
+        log_token(current);
+        current = get_next_token();
+    }
+
+    void skip_whitespace() {
+        while (pos < src.size() && isspace(src[pos])) pos++;
+    }
+    bool is_ident_start(char c) {
+        return isalpha(c) || c == '_';
+    }
+    bool is_ident_char(char c) {
+        return isalnum(c) || c == '_';
+    }
 };
 
-// shared globals
-extern Token current;
-extern std::string src;
-extern size_t pos;
-
-// lexer functions
-void reset_lexer(const std::string& input);
-Token get_next_token();
-void advance();
-void log_token(const Token& t);
-#endif
 

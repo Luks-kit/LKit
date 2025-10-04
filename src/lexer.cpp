@@ -1,33 +1,9 @@
 #include "lexer.hpp"
 #include <cctype>
 #include <iostream>
+#include <optional>
 
-Token current;
-std::string src;
-size_t pos = 0;
-
-static void skip_whitespace() {
-    while (pos < src.size() && isspace(src[pos])) pos++;
-}
-
-static bool is_ident_start(char c) {
-    return isalpha(c) || c == '_';
-}
-
-static bool is_ident_char(char c) {
-    return isalnum(c) || c == '_';
-}
-
-void log_token(const Token& tok) { std::cerr << "Token: " << tok.lexeme 
-          << " type=" << token_type_to_string(tok.type) << std::endl; }
-
-void reset_lexer(const std::string& input) {
-    src = input;
-    pos = 0;
-    current = get_next_token();
-}
-
-Token get_next_token() {
+Token Lexer::get_next_token() {
     skip_whitespace();
     if (pos >= src.size()) {
         return {TokenType::End, 0, ""};
@@ -44,15 +20,14 @@ Token get_next_token() {
         }
         return Token {TokenType::Number, val, ""};
     }
-    
+
     // characters
     if (c == '\'') {
         char val = '\0';
-
         while(pos < src.size() && src[pos] != '\''){
-        val = src[++pos];
-        pos++;
-           }
+            val = src[++pos];
+            pos++;
+        }
         return Token{TokenType::Char, val, ""};
     }
 
@@ -62,6 +37,7 @@ Token get_next_token() {
         while (pos < src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
         }
+        // keyword checks...
         if (ident == "int") return {TokenType::KwType, 0, ident};
         if (ident == "short") return {TokenType::KwType, 0, ident};
         if (ident == "long") return {TokenType::KwType, 0, ident};
@@ -80,11 +56,22 @@ Token get_next_token() {
         if (ident == "false") return {TokenType::KwFalse, 0, ident};
         if (ident == "let") return {TokenType::KwLet, 0, ident};
         if (ident == "subr") return {TokenType::KwSubr, 0 , ident};
-
         return {TokenType::Ident, 0, ident};
     }
 
-    // single char tokens
+    // single char tokens...
+    auto op_return = op_check();
+
+    if(op_return) {return *op_return; }
+
+    std::cerr << "Unknown character: " << c << "\n";
+    return {TokenType::End, 0, ""};
+}
+
+std::optional<Token> Lexer::op_check() {
+
+    char c = src[pos];
+
     switch (c) {
         case '+': {
             pos++;
@@ -162,7 +149,7 @@ Token get_next_token() {
             }
             return Token{TokenType::Caret, 0, "^"};
         }
-        case '~': return {TokenType::Tilde, 0, std::string(1,'~')};
+        case '~': return Token {TokenType::Tilde, 0, std::string(1,'~')};
         case '<': {
             pos++;
             if (pos < src.size() && src[pos] == '=') {
@@ -181,7 +168,7 @@ Token get_next_token() {
         }
         case '=': {
             pos++;
-             if (pos < src.size() && src[pos] == '=') {
+                if (pos < src.size() && src[pos] == '=') {
                 pos++;
                 return Token{TokenType::EqEq, 0, "=="};
             }
@@ -196,18 +183,10 @@ Token get_next_token() {
             return Token{TokenType::Not, 0, "!"};
         }
 
-        case ';': { pos++; return {TokenType::Semi, 0, std::string(1, ';')}; }
-        case '(': { pos++; return {TokenType::LParen, 0, std::string(1, '(')}; }
-        case ')': { pos++; return {TokenType::RParen, 0, std::string(1, ')')}; }
-        case '{': { pos++; return {TokenType::LBrace, 0, std::string(1, '{')}; }
-        case '}': { pos++; return {TokenType::RBrace, 0, std::string(1, '}')}; }
+        case ';': { pos++; return Token {TokenType::Semi, 0, std::string(1, ';')}; }
+        case '(': { pos++; return Token {TokenType::LParen, 0, std::string(1, '(')}; }
+        case ')': { pos++; return Token {TokenType::RParen, 0, std::string(1, ')')}; }
+        case '{': { pos++; return Token {TokenType::LBrace, 0, std::string(1, '{')}; }
+        case '}': { pos++; return Token {TokenType::RBrace, 0, std::string(1, '}')}; }
+    }
 }
-    
-    std::cerr << "Unknown character: " << c << "\n";
-    return {TokenType::End, 0, ""};
-}
-
-void advance() {
-  log_token(current); current = get_next_token();
-}
-

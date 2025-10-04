@@ -5,8 +5,9 @@
 #include "eval.hpp"
 
 void reploop(){
-std::string line, source;
-int brace_balance = 0;
+    std::string line, source;
+    int brace_balance = 0;
+    Lexer lex;
 
     while (true) {
         std::cout << "> ";
@@ -27,12 +28,13 @@ int brace_balance = 0;
         }
 
         // Only parse when braces are balanced
-        reset_lexer(source);
-        AST* tree = parse();
+        lex.reset_lexer(source);
+        AST* tree = parse(lex);
         int result = eval(tree);
         std::cout << "Result = " << result << "\n";
         source.clear();
-}       cleanup_scopes();
+    }       
+    cleanup_scopes();
     
 }
 
