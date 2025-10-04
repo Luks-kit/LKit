@@ -7,7 +7,7 @@ enum class ExprKind { Number, Var, Binary, Unary, Call };
 
 struct Expr : Node {
     ExprKind kind;
-    explicit Expr(ExprKind k) : kind(k) {nodeType = NodeType::Expr; }
+    explicit Expr(ExprKind k) : Node(NodeType::Expr), kind(k) { }
     virtual ~Expr() = default;
 };
 
