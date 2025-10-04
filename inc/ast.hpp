@@ -12,7 +12,7 @@ using ASTPtr = AST*;
 
 struct BinOp { std::string op; ASTPtr lhs = nullptr; ASTPtr rhs = nullptr; };
 struct Assign { std::string name; ASTPtr expr = nullptr; };
-struct Decl {std::string name; ASTPtr expr = nullptr; };
+struct Decla {std::string name; ASTPtr expr = nullptr; };
 struct AssignOp { std::string name; ASTPtr rhs = nullptr; char op; };
 struct IncDec { std::string name; char op; };
 struct Check { ASTPtr cond; ASTPtr ok_branch; ASTPtr then_branch = nullptr; };
@@ -24,7 +24,7 @@ using ASTValue = std::variant<
     std::string,   // Ident
     BinOp,
     Assign,
-    Decl,
+    Decla,
     AssignOp,
     IncDec,
     Check,
@@ -71,7 +71,7 @@ struct AST {
         return new AST{ASTType::Assign, Assign{name, expr}};
     }
     static AST* make_decl(const std::string& name, AST* expr) {
-        return new AST{ASTType::Decl, Decl{name, expr}};
+        return new AST{ASTType::Decl, Decla{name, expr}};
     }
 
     static AST* make_assign_op(const std::string& name, AST* rhs, char op) {
