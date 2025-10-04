@@ -9,7 +9,7 @@ enum class DeclKind { Var, Func, Struct, Enum, Union, Tool, Kit };
 
 struct Decl : Node {
     DeclKind kind;
-    explicit Decl(DeclKind k) : kind(k) {nodeType = NodeType::Decl; }
+    explicit Decl(DeclKind k) : Node(NodeType::Decl), kind(k) { }
     virtual ~Decl() = default;
 };
 
