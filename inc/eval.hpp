@@ -6,6 +6,30 @@
 int eval(AST* n);
 void cleanup_scopes();
 
+// evaluator.hpp
 
+#include "expr.hpp"
+#include "stmt.hpp"
+#include "decl.hpp"
+#include <memory>
+#include <iostream>
+
+class Evaluator {
+public:
+    void eval(const Node* node) {
+        switch (node->nodeType) {
+            case NodeType::Expr: eval_expr(static_cast<const Expr*>(node)); break;
+            case NodeType::Stmt: eval_stmt(static_cast<const Stmt*>(node)); break;
+            case NodeType::Decl: eval_decl(static_cast<const Decl*>(node)); break;
+        }
+    }
+
+private:
+    void eval_expr(const Expr* e);
+
+    void eval_stmt(const Stmt* s);
+
+    void eval_decl(const Decl* d);
+}
 #endif
 
