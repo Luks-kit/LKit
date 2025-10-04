@@ -98,7 +98,7 @@ struct AST {
     const std::string& as_string() const { return std::get<std::string>(value); }
     BinOp& as_binop() { return std::get<BinOp>(value); }
     Assign& as_assign() { return std::get<Assign>(value); }
-    Decl& as_decl() {return std::get<Decl>(value); }
+    Decla& as_decl() {return std::get<Decl>(value); }
     AssignOp& as_assign_op() { return std::get<AssignOp>(value); }
     IncDec& as_incdec() { return std::get<IncDec>(value); }
     Check& as_check() { return std::get<Check>(value); }
