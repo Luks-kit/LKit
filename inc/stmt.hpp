@@ -8,7 +8,7 @@ enum class StmtKind { ExprStmt, Block, If, While, Return };
 
 struct Stmt : Node {
     StmtKind kind;
-    explicit Stmt(StmtKind k) : kind(k) {nodeType = NodeType::Stmt; }
+    explicit Stmt(StmtKind k) : Node(NodeType::Stmt), kind(k) {}
     virtual ~Stmt() = default;
 };
 
