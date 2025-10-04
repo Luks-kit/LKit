@@ -30,6 +30,6 @@ private:
     void eval_stmt(const Stmt* s);
 
     void eval_decl(const Decl* d);
-}
+};
 #endif
 
