@@ -15,46 +15,47 @@ enum class TokenType {
     // arithmetic
     Plus, Minus, Star, Slash,
     PlusEq, MinusEq, StarEq, SlashEq,
-    Increment, Decrement, Pow,
+    Increment, Decrement, Pow, Modulo,
     // bitwise
     Amp, AmpEq, Pipe, PipeEq, Caret, CaretEq, Tilde, 
-    
     Not,Eq, Lt, Le, Gt, Ge, EqEq, NotEq,
-    
     BoolAnd, BoolOr,
     // keywords
-    KwInt, KwShort, KwLong, KwChar, KwBool, KwFloat, KwDouble, KwString,
-    KwCheck, KwThen, KwRecheck,KwOn, KwReturn, KwConst,
-    KwTrue, KwFalse, KwLet, KwSubr,
+    KwIf, KwWhile, KwFor,
+    KwCheck, KwThen, KwRecheck,KwOn, KwOnly, KwReturn, KwConst,
+    KwTrue, KwFalse, KwLet, KwSubr, KwCase, KwElse, KwTypeof,
+    KwStruct, KwEnum, KwUnion, KwTool, KwKit, KwImport,
+    // punctuation
+    Colon, Assign, Semi, Comma,
+    LParen, RParen, LBrace, RBrace,
+    //handle shenanigains
+    Perm, Sizeof, Arrow, Dot, Question, QuestionDot, DoubleColon,
 
-    Assign, Semi, LParen, RParen,
-    LBrace, RBrace
 };
 
-constexpr std::array<const char*, 60> token_type_names = {
+constexpr std::array<const char*, 70> token_type_names = {
     "End",
     "Literal", "KwType",
     "Ident",
-    
+
     // arithmetic
     "Plus", "Minus", "Star", "Slash",
     "PlusEq", "MinusEq", "StarEq", "SlashEq",
     "Increment", "Decrement", "Pow",
-    
     // bitwise
-    "Amp", "AmpEq", "Pipe", "PipeEq", "Caret", "CaretEq", "Tilde",
-
-    // logical/comparison
+    "Amp", "AmpEq", "Pipe", "PipeEq", "Caret", "CaretEq", "Tilde", 
     "Not", "Eq", "Lt", "Le", "Gt", "Ge", "EqEq", "NotEq",
     "BoolAnd", "BoolOr",
-
     // keywords
-    "KwInt","KwShort", "KwLong", "KwChar", "KwBool", "KwFloat","KwDouble", "KwString",
-    "KwCheck", "KwThen", "KwRecheck", "KwOn", "KwReturn", "KwConst",
-    "KwTrue", "KwFalse", "KwLet", "KwSubr",
-
+    "KwIf", "KwWhile", "KwFor",
+    "KwCheck", "KwThen", "KwRecheck", "KwOn", "KwOnly", "KwReturn", "KwConst",
+    "KwTrue", "KwFalse", "KwLet", "KwSubr", "KwCase", "KwElse", "KwTypeof",
+    "KwStruct", "KwEnum", "KwUnion", "KwTool", "KwKit", "KwImport",
     // punctuation
-    "Assign", "Semi", "LParen", "RParen", "LBrace", "RBrace"
+    "Colon", "Assign", "Semi", 
+    "LParen", "RParen", "LBrace", "RBrace"
+    //handle shenanigains
+    ,"Perm", "Sizeof", "Arrow", "Dot", "Question", "QuestionDot", "DoubleColon"
 };
 
 inline const char* token_type_to_string(TokenType type) {

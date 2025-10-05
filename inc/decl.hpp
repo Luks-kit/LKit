@@ -5,7 +5,7 @@
 #include <memory>
 #include <utility>
 
-enum class DeclKind { Var, Func, Struct, Enum, Union, Tool, Kit };
+enum class DeclKind { Var, Subr, Struct, Enum, Union, Tool, Kit };
 
 struct Decl : Node {
     DeclKind kind;
@@ -21,13 +21,13 @@ struct VarDecl : Decl {
         : Decl(DeclKind::Var), name(std::move(n)), type_name(std::move(t)), init(std::move(i)) {}
 };
 
-struct FuncDecl : Decl {
+struct SubrDecl : Decl {
     std::string name;
     std::string return_type;
     std::vector<std::pair<std::string, std::string>> params;
-    std::unique_ptr<BlockStmt> body;
-    FuncDecl(std::string n, std::string rt)
-        : Decl(DeclKind::Func), name(std::move(n)), return_type(std::move(rt)) {}
+    std::unique_ptr<Stmt> body;
+    SubrDecl(std::string n, std::string rt)
+        : Decl(DeclKind::Subr), name(std::move(n)), return_type(std::move(rt)) {}
 };
 
 struct StructDecl : Decl {

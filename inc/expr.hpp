@@ -1,9 +1,10 @@
 #pragma once
 #include "node.hpp"
+#include "value.hpp"
 #include <string>
 #include <memory>
 
-enum class ExprKind { Number, Var, Binary, Unary, Call };
+enum class ExprKind { Literal, Ident, Binary, Unary, Call };
 
 struct Expr : Node {
     ExprKind kind;
@@ -12,16 +13,16 @@ struct Expr : Node {
 };
 
 // Literal numbers, strings, etc.
-struct NumberExpr : Expr {
-    std::string literal;
-    NumberExpr(const std::string& lit) 
-        : Expr(ExprKind::Number), literal(lit) {}
+struct LiteralExpr : Expr {
+    Value literal;
+    LiteralExpr(const Value& lit) 
+        : Expr(ExprKind::Literal), literal(lit) {}
 };
 
-struct VarExpr : Expr {
+struct IdentExpr : Expr {
     std::string name;
-    VarExpr(const std::string& n) 
-        : Expr(ExprKind::Var), name(n) {}
+    IdentExpr(const std::string& n) 
+        : Expr(ExprKind::Ident), name(n) {}
 };
 
 struct BinaryExpr : Expr {
@@ -36,4 +37,11 @@ struct UnaryExpr : Expr {
     std::unique_ptr<Expr> operand;
     UnaryExpr(const std::string& o, std::unique_ptr<Expr> e)
         : Expr(ExprKind::Unary), op(o), operand(std::move(e)) {}
+};
+
+struct CallExpr : Expr {
+    std::unique_ptr<Expr> callee;
+    std::vector<std::unique_ptr<Expr>> args;
+    CallExpr(std::unique_ptr<Expr> c, std::vector<std::unique_ptr<Expr>> a)
+        : Expr(ExprKind::Call), callee(std::move(c)), args(std::move(a)) {}
 };

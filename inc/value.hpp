@@ -121,7 +121,7 @@ struct Value {
         }, value, other.value);
     }
 
-Value operator||(const Value& other) const {
+    Value operator||(const Value& other) const {
     return std::visit([](auto&& lhs, auto&& rhs) -> Value {
         if constexpr(std::is_same_v<std::decay_t<decltype(lhs)>, bool> &&
                      std::is_same_v<std::decay_t<decltype(rhs)>, bool>)
