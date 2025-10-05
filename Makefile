@@ -20,5 +20,5 @@ clean:
 	rm -f src/*.o
 run: all
 	$(TARGET)
-test: $(TARGET) build/test.toy
+test: build/test.toy $(TARGET)
 	$(TARGET) < $< 

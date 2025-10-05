@@ -3,7 +3,15 @@
 
 #include "ast.hpp"
 
-Value eval(AST* n);
+Value eval(AST *n);
+Value eval_check(AST *n);
+Value eval_recheck(AST *n);
+Value eval_decl(AST *n);
+Value eval_assign(AST *n);
+Value eval_block(AST *n);
+Value eval_inc_dec(AST *n);
+Value eval_assign_op(AST *n);
+Value eval_binop(AST *n);
 void cleanup_scopes();
 
 // evaluator.hpp

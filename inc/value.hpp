@@ -4,6 +4,7 @@
 #include <string>
 #include <stdexcept>
 #include <type_traits>
+#include <cmath>
 
 enum class ValueType {
     INT,
@@ -102,6 +103,33 @@ struct Value {
     Value operator&(const Value& other) const { return binaryOp(other, std::bit_and<>()); }
     Value operator|(const Value& other) const { return binaryOp(other, std::bit_or<>()); }
     Value operator^(const Value& other) const { return binaryOp(other, std::bit_xor<>()); }
+    Value pow(const Value& other) const {
+        // Only for numeric types
+        if (!isNumeric() || !other.isNumeric()) {
+            throw std::runtime_error("Exponentiation requires numeric types");
+        }
+        double base = toDouble();
+        double exponent = other.toDouble();
+        return Value(static_cast<double>(std::pow(base, exponent)));
+    }
+    Value operator&&(const Value& other) const {
+    return std::visit([](auto&& lhs, auto&& rhs) -> Value {
+        if constexpr(std::is_same_v<std::decay_t<decltype(lhs)>, bool> &&
+                     std::is_same_v<std::decay_t<decltype(rhs)>, bool>)
+                return Value(lhs && rhs);
+            else throw std::runtime_error("&& requires bools");
+        }, value, other.value);
+    }
+
+Value operator||(const Value& other) const {
+    return std::visit([](auto&& lhs, auto&& rhs) -> Value {
+        if constexpr(std::is_same_v<std::decay_t<decltype(lhs)>, bool> &&
+                     std::is_same_v<std::decay_t<decltype(rhs)>, bool>)
+                return Value(lhs || rhs);
+            else throw std::runtime_error("|| requires bools");
+        }, value, other.value);
+    }
+
     Value operator~() const { return unaryOp(std::bit_not<>());}
 
     // Comparison
@@ -188,4 +216,5 @@ private:
             else throw std::runtime_error("Cannot convert to double");
         }, value);
     }
+    
 };

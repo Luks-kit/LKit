@@ -31,7 +31,7 @@ void reploop(){
         lex.reset_lexer(source);
         AST* tree = parse(lex);
         Value result = eval(tree);
-        std::cout << "Result:" << result.toString() << "\n";
+        std::cout << "Result: " << result.toString() << "\n";
         source.clear();
     }       
     cleanup_scopes();
