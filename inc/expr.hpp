@@ -3,6 +3,8 @@
 #include "value.hpp"
 #include <string>
 #include <memory>
+#include <vector>
+
 
 enum class ExprKind { Literal, Ident, Binary, Unary, Call };
 
