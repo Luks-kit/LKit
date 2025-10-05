@@ -1,7 +1,7 @@
 #include "parser.hpp"
 #include "lexer.hpp"
+#include "error.hpp"
 #include <iostream>
-#include <cstdlib>
 #include <string>
 
 // Forward declarations
@@ -13,18 +13,16 @@ static AST* parse_stmt(Lexer& lex);
 
 static void expect(Lexer& lex, TokenType type) {
     if (lex.current.type != type) {
-        std::cerr << "Expected token " << token_type_to_string(type) 
-                  << " but got " << token_type_to_string(lex.current.type) << "\n";
-        exit(1);
+        throw ParseError(std::string("Expected token ") + token_type_to_string(type)
+                         + " but got " + token_type_to_string(lex.current.type));
     }
     lex.advance();
 }
 
 static void light_expect(Lexer& lex, TokenType type) {
     if (lex.current.type != type) {
-        std::cerr << "Expected token " << token_type_to_string (type) 
-            << " but got token " << token_type_to_string(lex.current.type) << "\n";
-        exit(1);
+        throw ParseError(std::string("Expected token ") + token_type_to_string(type)
+                         + " but got " + token_type_to_string(lex.current.type));
     }
 }
 
@@ -55,13 +53,12 @@ static AST* parse_factor(Lexer& lex) {
         lex.advance(); // consume '('
         AST* n = parse_expr(lex); // full precedence
         if (lex.current.type != TokenType::RParen) {
-            std::cerr << "Expected ) in parse_factor\n"; exit(1);
-        }
+                throw ParseError("Expected ) in parse_factor");
+            }
         lex.advance(); // consume ')'
         return n;
     }
-    std::cerr << "Unexpected token in factor:" << lex.current.lexeme << "\n";
-    exit(1);
+    throw ParseError(std::string("Unexpected token in factor: ") + lex.current.lexeme);
 }
 
 // Unary operators: ~ (bitwise NOT), - (negation)
@@ -144,7 +141,7 @@ static AST* parse_comparison(Lexer& lex) {
             case TokenType::NotEq: op = "!="; break;
             case TokenType::BoolAnd:op = "&&"; break;
             case TokenType::BoolOr: op = "||"; break; 
-            default: std::cerr << "Unknown comparison\n"; exit(1);
+            default: throw ParseError("Unknown comparison");
         }
         lex.advance();
         AST* right = parse_bitwise_or(lex);
@@ -165,6 +162,7 @@ static AST* parse_block(Lexer& lex) {
         stmts.push_back(parse_stmt(lex));
     }
    
+    expect(lex, TokenType::RBrace); // consume '}'
     return AST::make_block(stmts);
 }
 
@@ -197,7 +195,8 @@ static AST* parse_assign (Lexer& lex) {
         return AST::make_incdec(name, op);
         }    
         
-
+    // If we reach here, the identifier wasn't followed by a valid assignment operator
+    throw ParseError(std::string("Invalid assignment statement for identifier '") + name + "'");
 }
 
 static AST* parse_decl(Lexer& lex){
@@ -215,6 +214,8 @@ static AST* parse_decl(Lexer& lex){
         lex.advance();
         return AST::make_decl(name, AST::make_literal(0));
     }
+    // If we reach here, declaration syntax was invalid
+    throw ParseError(std::string("Invalid declaration for '") + name + "'");
 }
 
 // Statement
@@ -225,17 +226,16 @@ static AST* parse_stmt(Lexer& lex) {
     if (lex.current.type == TokenType::KwLet) { return parse_decl(lex); }
     if (lex.current.type == TokenType::Ident) { return parse_assign(lex);}
     
-    std::cerr << "Invalid statement\n";
-    exit(1);
+    throw ParseError("Invalid statement");
 }
 
 // If statement
 AST* parse_check(Lexer& lex) {
     lex.advance(); // consume 'if'
-    if (lex.current.type != TokenType::LParen) { std::cerr << "Expected ( in parse_check\n"; exit(1);}
+    if (lex.current.type != TokenType::LParen) { throw ParseError("Expected ( in parse_check"); }
     lex.advance(); // consume '('
     AST* cond = parse_expr(lex);
-    if (lex.current.type != TokenType::RParen) { std::cerr << "Expected ) in parse_check\n"; exit(1);}
+    if (lex.current.type != TokenType::RParen) { throw ParseError("Expected ) in parse_check"); }
     lex.advance(); // consume ')'
     AST* then_branch = parse_stmt(lex);
     AST* else_branch = nullptr;

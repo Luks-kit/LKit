@@ -27,8 +27,7 @@ static Value get_var(const std::string& name) {
     for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
         for (auto& v : *it) if (v.name == name) return *(v.addr);
     }
-    std::cerr << "Undefined variable: " << name << "\n";
-    exit(1);
+    throw std::runtime_error(std::string("Undefined variable: ") + name);
 }
 
 static void set_var(const std::string& name, Value value) {
@@ -36,8 +35,7 @@ static void set_var(const std::string& name, Value value) {
         for (auto& v : *it) if (v.name == name) { *(v.addr) = value; return; }
     }
 
-     std::cerr << "Undefined variable: " << name << "\n";
-    exit(1);  // "let" works, no auto decl for now
+    throw std::runtime_error(std::string("Undefined variable: ") + name);  // "let" works, no auto decl for now
 }
 
 
@@ -195,7 +193,8 @@ Value eval_binop(AST *n)
         return pow(l.get<float>(), r.get<float>());
     }
     else if (b.op == "/")
-        return r.value != Value(0).value ? l / r : (std::cerr << "division by zero\n", exit(1), 0); // weird Value(0).value, but ok
+        if (r.value != Value(0).value) return l / r;
+        else throw std::runtime_error("division by zero"); // weird Value(0).value, but ok
     else if (b.op == "&")
         return l & r;
     else if (b.op == "|")
@@ -225,6 +224,5 @@ Value eval_binop(AST *n)
     else if (b.op == "!=")
         return l.value != r.value;
 
-    std::cerr << "Unknown binop\n";
-    exit(1);
+    throw std::runtime_error("Unknown binop");
 }
