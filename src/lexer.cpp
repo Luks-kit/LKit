@@ -11,25 +11,8 @@ Token Lexer::get_next_token() {
 
     char c = src[pos];
 
-    // numbers
-    if (isdigit(c)) {
-        int val = 0;
-        while (pos < src.size() && isdigit(src[pos])) {
-            val = val * 10 + (src[pos] - '0');
-            pos++;
-        }
-        return Token {TokenType::Number, val, ""};
-    }
-
-    // characters
-    if (c == '\'') {
-        char val = '\0';
-        while(pos < src.size() && src[pos] != '\''){
-            val = src[++pos];
-            pos++;
-        }
-        return Token{TokenType::Char, val, ""};
-    }
+    Token literal = literal_check();
+    if (literal.type == TokenType::Literal) return literal;
 
     // identifiers / keywords
     if (is_ident_start(c)) {
@@ -37,7 +20,21 @@ Token Lexer::get_next_token() {
         while (pos < src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
         }
-        // keyword checks...
+        return ident_check(ident);
+    }
+
+    // single char tokens...
+    Token op_return = op_check();
+
+    if(op_return.type != TokenType::End) {return op_return; }
+
+    std::cerr << "Unknown character: " << c << "\n";
+    return {TokenType::End, 0, ""};
+}
+
+Token Lexer::ident_check(const std::string& ident){
+
+     // keyword checks...
         if (ident == "int") return {TokenType::KwType, 0, ident};
         if (ident == "short") return {TokenType::KwType, 0, ident};
         if (ident == "long") return {TokenType::KwType, 0, ident};
@@ -52,23 +49,116 @@ Token Lexer::get_next_token() {
         if (ident == "on") return {TokenType::KwOn, 0, ident};
         if (ident == "recheck") return {TokenType::KwRecheck, 0, ident};
         if (ident == "return") return {TokenType::KwReturn, 0, ident};
-        if (ident == "true") return {TokenType::KwTrue, 1, ident};
-        if (ident == "false") return {TokenType::KwFalse, 0, ident};
+        if (ident == "true") return {TokenType::KwTrue, true, ident};
+        if (ident == "false") return {TokenType::KwFalse, false, ident};
         if (ident == "let") return {TokenType::KwLet, 0, ident};
         if (ident == "subr") return {TokenType::KwSubr, 0 , ident};
         return {TokenType::Ident, 0, ident};
-    }
-
-    // single char tokens...
-    auto op_return = op_check();
-
-    if(op_return) {return *op_return; }
-
-    std::cerr << "Unknown character: " << c << "\n";
-    return {TokenType::End, 0, ""};
 }
 
-std::optional<Token> Lexer::op_check() {
+Token Lexer::literal_check(){
+    char c = src[pos];
+
+    if (isdigit(c)) {
+    // Number literal
+    int start = pos;
+    bool isFloat = false;
+
+    while (pos < src.size() && isdigit(src[pos])) pos++;
+
+    if (pos < src.size() && src[pos] == '.') {
+        isFloat = true;
+        pos++;
+        while (pos < src.size() && isdigit(src[pos])) pos++;
+    }
+
+    std::string numStr = src.substr(start, pos - start);
+    Value val;
+
+    if (isFloat)
+        val.set<float>(std::stof(numStr));
+    else
+        val.set<int>(std::stoi(numStr));
+
+    return Token{TokenType::Literal, val, ""};
+    }
+
+    // Boolean literals
+    if (match_str("true")) {
+        Value val;
+        val.set<bool>(true);
+        return Token{TokenType::Literal, val, "true"};
+    }
+    if (match_str("false")) {
+        Value val;
+        val.set<bool>(false);
+        return Token{TokenType::Literal, val, "false"};
+    }
+
+    // Character literal
+    if (c == '\'') {
+        pos++; // skip opening '
+        if (pos >= src.size()) throw std::runtime_error("Unterminated char literal");
+
+        char ch = src[pos++];
+        if (ch == '\\') {
+            if (pos >= src.size()) throw std::runtime_error("Invalid escape sequence");
+            char esc = src[pos++];
+            switch (esc) {
+                case 'n': ch = '\n'; break;
+                case 't': ch = '\t'; break;
+                case 'r': ch = '\r'; break;
+                case '\\': ch = '\\'; break;
+                case '\'': ch = '\''; break;
+                case '0': ch = '\0'; break;
+                default: throw std::runtime_error("Unknown escape in char literal");
+            }
+        }
+
+        if (pos >= src.size() || src[pos] != '\'')
+            throw std::runtime_error("Unterminated char literal");
+        pos++; // skip closing '
+
+        Value val;
+        val.set<char>(ch);
+        return Token{TokenType::Literal, val, ""};
+    }
+
+    // String literal
+    if (c == '"') {
+        pos++; // skip opening "
+        std::string s;
+        while (pos < src.size() && src[pos] != '"') {
+            if (src[pos] == '\\') {
+                pos++;
+                if (pos >= src.size()) throw std::runtime_error("Invalid escape in string");
+                char esc = src[pos++];
+                switch (esc) {
+                    case 'n': s += '\n'; break;
+                    case 't': s += '\t'; break;
+                    case 'r': s += '\r'; break;
+                    case '"': s += '"'; break;
+                    case '\\': s += '\\'; break;
+                    default: s += esc; break;
+                }
+            } else {
+                s += src[pos++];
+            }
+        }
+        if (pos >= src.size()) throw std::runtime_error("Unterminated string literal");
+        pos++; // skip closing "
+
+        Value val;
+        val.set<std::string>(s);
+        return Token{TokenType::Literal, val, ""};
+    }
+
+    return Token{TokenType::End, 0, ""};
+
+}
+
+
+Token Lexer::op_check() {
 
     char c = src[pos];
 
@@ -189,4 +279,7 @@ std::optional<Token> Lexer::op_check() {
         case '{': { pos++; return Token {TokenType::LBrace, 0, std::string(1, '{')}; }
         case '}': { pos++; return Token {TokenType::RBrace, 0, std::string(1, '}')}; }
     }
+
+    return {TokenType::End, 0, ""};
+
 }

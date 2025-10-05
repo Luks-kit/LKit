@@ -30,8 +30,8 @@ void reploop(){
         // Only parse when braces are balanced
         lex.reset_lexer(source);
         AST* tree = parse(lex);
-        int result = eval(tree);
-        std::cout << "Result = " << result << "\n";
+        Value result = eval(tree);
+        std::cout << "Result:" << result.toString() << "\n";
         source.clear();
     }       
     cleanup_scopes();

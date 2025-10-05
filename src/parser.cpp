@@ -41,13 +41,8 @@ AST* parse_recheck(Lexer& lex) {
 
 // Factor: numbers, chars, identifiers, parentheses
 static AST* parse_factor(Lexer& lex) {
-    if (lex.current.type == TokenType::Number) {
-        AST* n = AST::make_number(lex.current.value);
-        lex.advance();
-        return n;
-    }
-    if (lex.current.type == TokenType::Char) {
-        AST* n = AST::make_char(lex.current.value);
+    if (lex.current.type == TokenType::Literal) {
+        AST* n = AST::make_literal(lex.current.value);
         lex.advance();
         return n;
     }
@@ -218,7 +213,7 @@ static AST* parse_decl(Lexer& lex){
         return AST::make_decl(name, rhs); 
     } else if (lex.current.type == TokenType::Semi) {
         lex.advance();
-        return AST::make_decl(name, AST::make_number(0));
+        return AST::make_decl(name, AST::make_literal(0));
     }
 }
 

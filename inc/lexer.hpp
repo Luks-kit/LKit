@@ -5,10 +5,11 @@
 #include <cctype>
 #include <iostream>
 #include <optional>
+#include "value.hpp"
 
 enum class TokenType {
     End,
-    Number, Char, Bool, Float, String, KwType,
+    Literal, KwType,
     Ident,
 
     // arithmetic
@@ -32,7 +33,7 @@ enum class TokenType {
 
 constexpr std::array<const char*, 60> token_type_names = {
     "End",
-    "Number", "Char", "Bool", "Float", "String","KwType",
+    "Literal", "KwType",
     "Ident",
     
     // arithmetic
@@ -66,7 +67,7 @@ inline const char* token_type_to_string(TokenType type) {
 
 struct Token {
     TokenType type;
-    int value = 0;
+    Value value;
     std::string lexeme;
 };
 
@@ -83,8 +84,10 @@ struct Lexer {
 
     void reset_lexer(const std::string& input) { src.clear(); src = input; std::cout << src; pos = 0; current = get_next_token(); }
         
-    std::optional<Token> op_check();
-
+    Token op_check();
+    Token ident_check(const std::string& ident);
+    Token literal_check();
+    
     void log_token(const Token& tok) {
         std::cerr << "Token: " << tok.lexeme
                   << " type=" << token_type_to_string(tok.type) << std::endl;
@@ -104,6 +107,21 @@ struct Lexer {
     bool is_ident_char(char c) {
         return isalnum(c) || c == '_';
     }
+    bool match_str(const std::string& s) {
+    // skip if we're too close to end
+    if (pos + s.size() > src.size()) return false;
+
+    // compare substring
+    if (src.compare(pos, s.size(), s) != 0) return false;
+
+    // make sure it's not part of a longer identifier
+    char next = (pos + s.size() < src.size()) ? src[pos + s.size()] : '\0';
+    if (isalnum(next) || next == '_') return false;
+
+    // match succeeded, advance and return true
+    pos += s.size();
+    return true;
+}
 };
 
 

@@ -5,6 +5,7 @@
 #include <vector>
 #include <variant>
 #include <memory>
+#include "value.hpp"
 
 struct AST; // forward declaration
 
@@ -20,7 +21,7 @@ struct Recheck { ASTPtr cond; ASTPtr body; };
 struct Block { std::vector<ASTPtr> stmts; };
 
 using ASTValue = std::variant<
-    int,           // Number or Char
+    Value,          // Number or Char
     std::string,   // Ident
     BinOp,
     Assign,
@@ -33,8 +34,7 @@ using ASTValue = std::variant<
 >;
 
 enum class ASTType {
-    Number,
-    Char,
+    Literal,
     Ident,
     BinOp,
     Assign,
@@ -51,12 +51,8 @@ struct AST {
     ASTValue value;
 
     // Factory functions
-    static AST* make_number(int v) {
-        return new AST{ASTType::Number, v};
-    }
-
-    static AST* make_char(int v) {
-        return new AST{ASTType::Char, v};
+    static AST* make_literal(Value v){
+        return new AST{ASTType::Literal, v};
     }
 
     static AST* make_ident(const std::string& name) {
@@ -94,7 +90,7 @@ struct AST {
         return new AST{ASTType::Block, Block{stmts}};
     }
     
-     int as_int() const { return std::get<int>(value); }
+    Value as_value() const { return std::get<Value>(value); }
     const std::string& as_string() const { return std::get<std::string>(value); }
     BinOp& as_binop() { return std::get<BinOp>(value); }
     Assign& as_assign() { return std::get<Assign>(value); }

@@ -3,7 +3,7 @@
 
 #include "ast.hpp"
 
-int eval(AST* n);
+Value eval(AST* n);
 void cleanup_scopes();
 
 // evaluator.hpp
