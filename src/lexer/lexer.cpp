@@ -2,58 +2,78 @@
 #include <cctype>
 #include <iostream>
 #include <optional>
+#include <unordered_map>
+
+
+const std::unordered_map<std::string, TokenType> Lexer::keywords = {
+    {"int", TokenType::KwType},        {"short", TokenType::KwType},
+    {"long", TokenType::KwType},       {"char", TokenType::KwType},
+    {"bool", TokenType::KwType},       {"float", TokenType::KwType},
+    {"double", TokenType::KwType},     {"string", TokenType::KwType},
+    {"const", TokenType::KwConst},     {"check", TokenType::KwCheck},
+    {"then", TokenType::KwThen},       {"on", TokenType::KwOn},
+    {"recheck", TokenType::KwRecheck}, {"return", TokenType::KwReturn},
+    {"if", TokenType::KwIf},           {"else", TokenType::KwElse},
+    {"while", TokenType::KwWhile},     {"for", TokenType::KwFor},
+    {"only", TokenType::KwOnly},       {"case", TokenType::KwCase},
+    {"let", TokenType::KwLet},         {"subr", TokenType::KwSubr},
+    {"struct", TokenType::KwStruct},   {"enum", TokenType::KwEnum},
+    {"union", TokenType::KwUnion},     {"tool", TokenType::KwTool},
+    {"kit", TokenType::KwKit},         {"import", TokenType::KwImport},
+    {"typeof", TokenType::KwTypeof},   {"sizeof", TokenType::Sizeof},
+    {"true", TokenType::KwTrue},       {"false", TokenType::KwFalse}
+};
+
 
 Token Lexer::get_next_token() {
     skip_whitespace();
     if (pos >= src.size()) {
-        return {TokenType::End, 0, ""};
+        return Token{TokenType::End, 0, "", row, col};
     }
 
     char c = src[pos];
 
     Token literal = literal_check();
-    if (literal.type == TokenType::Literal) return literal;
+    if (literal.type == TokenType::Literal) { literal.row = row; literal.col = col; return literal; }
 
     // identifiers / keywords
     if (is_ident_start(c)) {
         std::string ident;
+        size_t start_row = row;
+        size_t start_col = col;
         while (pos < src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
+            col++;
         }
-        return ident_check(ident);
+        Token t = ident_check(ident, start_row, start_col);
+        t.row = start_row; t.col = start_col;
+        return t;
     }
 
+    // access chars and operators
+    Token access_return = access_check();
+    if(access_return.type != TokenType::End) { access_return.row = row; access_return.col = col; return access_return; }
     // single char tokens...
     Token op_return = op_check();
 
-    if(op_return.type != TokenType::End) {return op_return; }
+    if(op_return.type != TokenType::End) { op_return.row = row; op_return.col = col; return op_return; }
 
-    std::cerr << "Unknown character: " << c << "\n";
-    return {TokenType::End, 0, ""};
+    std::cerr << "Unknown character: " << c << " at " << row << ":" << col << "\n";
+    return Token{TokenType::End, 0, "", row, col};
 }
 
-Token Lexer::ident_check(const std::string& ident){
+Token Lexer::ident_check(const std::string& ident, size_t start_row, size_t start_col){
 
      // keyword checks...
-        if (ident == "int") return {TokenType::KwType, 0, ident};
-        if (ident == "short") return {TokenType::KwType, 0, ident};
-        if (ident == "long") return {TokenType::KwType, 0, ident};
-        if (ident == "char") return {TokenType::KwType, 0, ident};
-        if (ident == "bool") return {TokenType::KwType, 0, ident};
-        if (ident == "float") return {TokenType::KwType, 0, ident};
-        if (ident == "double") return {TokenType::KwType, 0, ident};
-        if (ident == "string") return {TokenType::KwType, 0, ident};
-        if (ident == "const") return {TokenType::KwConst, 0, ident};
-        if (ident == "check") return {TokenType::KwCheck, 0, ident};
-        if (ident == "then") return {TokenType::KwThen, 0, ident};
-        if (ident == "on") return {TokenType::KwOn, 0, ident};
-        if (ident == "recheck") return {TokenType::KwRecheck, 0, ident};
-        if (ident == "return") return {TokenType::KwReturn, 0, ident};
-        if (ident == "true") return {TokenType::KwTrue, true, ident};
-        if (ident == "false") return {TokenType::KwFalse, false, ident};
-        if (ident == "let") return {TokenType::KwLet, 0, ident};
-        if (ident == "subr") return {TokenType::KwSubr, 0 , ident};
-        return {TokenType::Ident, 0, ident};
+
+        auto it = keywords.find(ident);
+        if (it != keywords.end()) {
+            if (it->first == "true") return Token{it->second, true, ident, start_row, start_col};
+            if (it->first == "false") return Token{it->second, false, ident, start_row, start_col};
+            return Token{it->second, 0, ident, start_row, start_col};
+        }
+
+        return Token{TokenType::Ident, 0, ident, start_row, start_col};
 }
 
 Token Lexer::literal_check(){
@@ -80,29 +100,29 @@ Token Lexer::literal_check(){
     else
         val.set<int>(std::stoi(numStr));
 
-    return Token{TokenType::Literal, val, ""};
+    return Token{TokenType::Literal, val, "", row, col};
     }
 
     // Boolean literals
     if (match_str("true")) {
         Value val;
         val.set<bool>(true);
-        return Token{TokenType::Literal, val, "true"};
+        return Token{TokenType::Literal, val, "true", row, col};
     }
     if (match_str("false")) {
         Value val;
         val.set<bool>(false);
-        return Token{TokenType::Literal, val, "false"};
+        return Token{TokenType::Literal, val, "false", row, col};
     }
 
     // Character literal
     if (c == '\'') {
         pos++; // skip opening '
-        if (pos >= src.size()) throw std::runtime_error("Unterminated char literal");
+    if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Unterminated char literal at ") + std::to_string(row) + ":" + std::to_string(col));
 
         char ch = src[pos++];
         if (ch == '\\') {
-            if (pos >= src.size()) throw std::runtime_error("Invalid escape sequence");
+            if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Invalid escape sequence in char literal at ") + std::to_string(row) + ":" + std::to_string(col));
             char esc = src[pos++];
             switch (esc) {
                 case 'n': ch = '\n'; break;
@@ -111,17 +131,17 @@ Token Lexer::literal_check(){
                 case '\\': ch = '\\'; break;
                 case '\'': ch = '\''; break;
                 case '0': ch = '\0'; break;
-                default: throw std::runtime_error("Unknown escape in char literal");
+                default: throw std::runtime_error(std::string("Lexer::literal_check: Unknown escape in char literal at ") + std::to_string(row) + ":" + std::to_string(col));
             }
         }
 
         if (pos >= src.size() || src[pos] != '\'')
-            throw std::runtime_error("Unterminated char literal");
+            throw std::runtime_error(std::string("Lexer::literal_check: Unterminated char literal at ") + std::to_string(row) + ":" + std::to_string(col));
         pos++; // skip closing '
 
         Value val;
         val.set<char>(ch);
-        return Token{TokenType::Literal, val, ""};
+    return Token{TokenType::Literal, val, "", row, col};
     }
 
     // String literal
@@ -131,7 +151,7 @@ Token Lexer::literal_check(){
         while (pos < src.size() && src[pos] != '"') {
             if (src[pos] == '\\') {
                 pos++;
-                if (pos >= src.size()) throw std::runtime_error("Invalid escape in string");
+                if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Invalid escape in string at ") + std::to_string(row) + ":" + std::to_string(col));
                 char esc = src[pos++];
                 switch (esc) {
                     case 'n': s += '\n'; break;
@@ -145,141 +165,77 @@ Token Lexer::literal_check(){
                 s += src[pos++];
             }
         }
-        if (pos >= src.size()) throw std::runtime_error("Unterminated string literal");
+    if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Unterminated string literal at ") + std::to_string(row) + ":" + std::to_string(col));
         pos++; // skip closing "
 
         Value val;
         val.set<std::string>(s);
-        return Token{TokenType::Literal, val, ""};
+    return Token{TokenType::Literal, val, "", row, col};
     }
 
-    return Token{TokenType::End, 0, ""};
+    return Token{TokenType::End, 0, "", row, col};
 
 }
 
 
 Token Lexer::op_check() {
 
-    char c = src[pos];
-
-    switch (c) {
-        case '+': {
-            pos++;
-            if (pos < src.size() && src[pos] == '+') {
-                pos++;
-                return Token{TokenType::Increment, 0, "++"};
-            } else if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::PlusEq, 0, "+="};
-            }
-            return Token{TokenType::Plus, 0, "+"};
-            }
-
-        case '-':{
-            pos++;
-            if (pos < src.size() && src[pos] == '-') {
-                pos++;
-                return Token{TokenType::Decrement, 0, "--"};
-            } else if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::MinusEq, 0, "-="};
-            }
-            return Token{TokenType::Minus, 0, "-"};
-            }
-
-        case '*': {
-            pos++;
-            if (pos < src.size() && src[pos] == '*') {
-                pos++;
-                return Token{TokenType::Pow, 0, "**"};
-            } else if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::StarEq, 0, "*="};
-            }
-            return Token{TokenType::Star, 0, "*"};
-            }
 
 
-        case '/': {
-            pos++;
-            if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::SlashEq, 0, "/="};
-            } 
-            return Token{TokenType::Slash, 0, "/"};
+    // Multi-character operators (longest match first)
+    struct OpMap {
+        const char* str;
+        TokenType type;
+    };
+    static const OpMap ops[] = {
+        {"++", TokenType::Increment},   {"+=", TokenType::PlusEq},   {"+", TokenType::Plus},
+        {"--", TokenType::Decrement},   {"-=", TokenType::MinusEq},  {"**", TokenType::Pow}, {"-", TokenType::Minus},
+        {"*=", TokenType::StarEq},      {"*", TokenType::Star},
+        {"/=", TokenType::SlashEq},     {"/", TokenType::Slash},
+        {"&&", TokenType::BoolAnd},     {"&=", TokenType::AmpEq},    {"&", TokenType::Amp},
+        {"||", TokenType::BoolOr},      {"|=", TokenType::PipeEq},   {"|", TokenType::Pipe},
+        {"^=", TokenType::CaretEq},     {"^", TokenType::Caret},
+        {"~", TokenType::Tilde},
+        {"<=", TokenType::Le},          {"<", TokenType::Lt},
+        {">=", TokenType::Ge},          {">", TokenType::Gt},
+        {"==", TokenType::EqEq},        {"=", TokenType::Eq},
+        {"!=", TokenType::NotEq},       {"!", TokenType::Not},
+        {";", TokenType::Semi},
+        {"(", TokenType::LParen},       {")", TokenType::RParen},
+        {"{", TokenType::LBrace},       {"}", TokenType::RBrace}
+    };
+
+    for (const auto& op : ops) {
+        if (match_str(op.str, false)) {
+            return Token{op.type, 0, op.str};
         }
-
-        case '&': {
-            pos++;
-            if (pos < src.size() && src[pos] == '&') {
-                pos++;
-                return Token{TokenType::BoolAnd, 0, "&&"};
-            } else if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::AmpEq, 0, "&="};
-            }
-            return Token{TokenType::Amp, 0, "&"};
-            }
-        case '|': {
-            pos++;
-            if (pos < src.size() && src[pos] == '|') {
-                pos++;
-                return Token{TokenType::BoolOr, 0, "||"};
-            } else if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::PipeEq, 0, "|="};}
-            
-            return Token{TokenType::Pipe, 0, "|"};
-            }
-        case '^': {
-            pos++;
-            if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::CaretEq, 0, "^="};
-            }
-            return Token{TokenType::Caret, 0, "^"};
-        }
-        case '~': return Token {TokenType::Tilde, 0, std::string(1,'~')};
-        case '<': {
-            pos++;
-            if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::Le, 0, "<="};
-            }
-            return Token{TokenType::Lt, 0, "<"};
-        }
-        case '>': {
-            pos++;
-            if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::Ge, 0, ">="};
-            }
-            return Token{TokenType::Gt, 0, ">"};
-        }
-        case '=': {
-            pos++;
-                if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::EqEq, 0, "=="};
-            }
-            return Token{TokenType::Eq, 0, "="};
-        }
-        case '!': {
-            pos++;
-            if (pos < src.size() && src[pos] == '=') {
-                pos++;
-                return Token{TokenType::NotEq, 0, "!="};
-            }
-            return Token{TokenType::Not, 0, "!"};
-        }
-
-        case ';': { pos++; return Token {TokenType::Semi, 0, std::string(1, ';')}; }
-        case '(': { pos++; return Token {TokenType::LParen, 0, std::string(1, '(')}; }
-        case ')': { pos++; return Token {TokenType::RParen, 0, std::string(1, ')')}; }
-        case '{': { pos++; return Token {TokenType::LBrace, 0, std::string(1, '{')}; }
-        case '}': { pos++; return Token {TokenType::RBrace, 0, std::string(1, '}')}; }
     }
 
     return {TokenType::End, 0, ""};
 
+}
+
+Token Lexer::access_check(){
+    if (match_str("->", false)) {
+        return Token{TokenType::Arrow, 0, "->"};
+    }
+    if (match_str(".", false)) {
+        return Token{TokenType::Dot, 0, "."};
+    }
+    if (match_str("?.", false)) {
+        return Token{TokenType::QuestionDot, 0, "?."};
+    }
+    if (match_str("?", false)) {
+        return Token{TokenType::Question, 0, "?"};
+    }
+    if (match_str("::", false)) {
+        return Token{TokenType::DoubleColon, 0, "::"};
+    }
+    if(match_str("$", false)) {
+        return Token{TokenType::Perm, 0, "$"};
+    }
+    if(match_str(":", false)) {
+        return Token{TokenType::Colon, 0, ":"};
+    }
+    return {TokenType::End, 0, ""};
 }

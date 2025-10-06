@@ -5,6 +5,21 @@
 #include <stdexcept>
 #include <type_traits>
 #include <cmath>
+#include <memory>
+
+struct Node;
+struct Decl;
+struct Stmt; // forward declaration (compiler will complain otherwise)
+
+// User-defined type wrapper
+struct userdefined {
+    std::string type_name;
+    Decl* contents; // Pointer to a specific Decl type (e.g., StructDecl, EnumDecl)
+    bool operator==(const userdefined& other) const noexcept {
+        return type_name == other.type_name && contents == other.contents;
+    }
+};
+
 
 enum class ValueType {
     INT,
@@ -15,14 +30,15 @@ enum class ValueType {
     BOOL,
     CHAR,
     STRING,
-    NONE
+    NONE,
+    USERDEFINED
 };
 
-using IntegralValue = std::variant<int, short, long, float, double, bool, char, std::string>;
+using IntegralValue = std::variant<int, short, long, float, double, bool, char, std::string, userdefined, std::monostate>;
 
 struct Value {
     ValueType type = ValueType::NONE;
-    IntegralValue value;
+    IntegralValue value = std::monostate{};
 
     Value() = default;
     Value(IntegralValue val): value(val) {
@@ -36,6 +52,7 @@ struct Value {
     Value(bool val): value(val) {setTypeFromVariant();}
     Value(char val): value(val) {setTypeFromVariant();}
     Value(const std::string& val): value(val) {setTypeFromVariant();}
+    Value(const userdefined& val): value(val) {setTypeFromVariant();}
     Value(ValueType t, IntegralValue v): type(t), value(v) {}
 
     // Utility: infer type from variant
@@ -50,6 +67,8 @@ struct Value {
             else if constexpr (std::is_same_v<T, bool>) type = ValueType::BOOL;
             else if constexpr (std::is_same_v<T, char>) type = ValueType::CHAR;
             else if constexpr (std::is_same_v<T, std::string>) type = ValueType::STRING;
+            else if constexpr (std::is_same_v<T, userdefined>) type = ValueType::USERDEFINED;
+            else if constexpr (std::is_same_v<T, std::monostate>) type = ValueType::NONE;
             else type = ValueType::NONE;
         }, value);
     }
@@ -98,6 +117,7 @@ struct Value {
     // Arithmetic operators
     Value operator+(const Value& other) const { return arithmeticOp(other, std::plus<>()); }
     Value operator-(const Value& other) const { return arithmeticOp(other, std::minus<>()); }
+    Value operator-() const { return unaryOp(std::negate<>()); }
     Value operator*(const Value& other) const { return arithmeticOp(other, std::multiplies<>()); }
     Value operator/(const Value& other) const { return arithmeticOp(other, std::divides<>()); }
     Value operator&(const Value& other) const { return binaryOp(other, std::bit_and<>()); }
@@ -131,6 +151,14 @@ struct Value {
     }
 
     Value operator~() const { return unaryOp(std::bit_not<>());}
+    Value operator!() const {
+        return std::visit([](auto&& v) -> Value {
+            if constexpr (std::is_same_v<std::decay_t<decltype(v)>, bool>)
+                return Value(!v);
+            else
+                throw std::runtime_error("Logical NOT requires a boolean");
+        }, value);
+    }
 
     // Comparison
     bool operator==(const Value& other) const {
@@ -141,6 +169,32 @@ struct Value {
     bool operator!=(const Value& other) const {
         return !(*this == other);
     }
+
+    bool operator<(const Value& other) const {
+        if (type != other.type) throw std::runtime_error("Cannot compare different types");
+        return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+            using L = std::decay_t<decltype(lhs)>;
+            using R = std::decay_t<decltype(rhs)>;
+
+            if constexpr (std::is_arithmetic_v<L> && std::is_arithmetic_v<R>) {
+                return lhs < rhs;
+            } else if constexpr (std::is_same_v<L, std::string> && std::is_same_v<R, std::string>) {
+                return lhs < rhs;
+            } else {
+                throw std::runtime_error("Invalid types for comparison");
+            }
+        }, value, other.value);
+    }
+    bool operator<=(const Value& other) const {
+        return *this < other || *this == other;
+    }
+    bool operator>(const Value& other) const {
+        return !(*this <= other);
+    }
+    bool operator>=(const Value& other) const {
+        return !(*this < other);
+    }
+
 
 private:
     template <typename Op>
@@ -184,7 +238,7 @@ private:
         using T = std::decay_t<decltype(v)>;
 
         if constexpr (std::is_integral_v<T>) {
-            // bitwise NOT only for integers
+            // bitwise/regular NOT only for integers
             return Value(op(v));
         } else if constexpr (std::is_same_v<T, bool>) {
             // logical NOT for bools

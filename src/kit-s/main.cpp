@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include "interpret.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "eval.hpp"
@@ -27,11 +28,14 @@ void reploop(){
             continue;
         }
 
-        // Only parse when braces are balanced
-        lex.reset_lexer(source);
-        AST* tree = parse(lex);
-        Value result = eval(tree);
-        std::cout << "Result: " << result.toString() << "\n";
+    // Only parse when braces are balanced
+    lex.reset_lexer(source);
+    Parser parser(lex);
+    std::unique_ptr<Node> tree = parser.parse();
+    Evaluator evaluator;
+    Value result;
+    if (tree) result = evaluator.eval(tree.get());
+    std::cout << "Result: " << result.toString() << "\n";
         source.clear();
     }       
     cleanup_scopes();

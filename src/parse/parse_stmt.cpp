@@ -33,7 +33,8 @@ std::unique_ptr<Stmt> Parser::parse_check() {
         }
         return std::make_unique<CheckStmt>(std::move(expr), std::move(arms));
     } else {
-        throw std::runtime_error("Expected 'only' or 'on' after check(expr)");
+        throw std::runtime_error(std::string("Parser::parse_check: Expected 'only' or 'on' after check(expr) at ")
+                                 + std::to_string(current.row) + ":" + std::to_string(current.col));
     }
 }
 
@@ -92,7 +93,8 @@ std::unique_ptr<Stmt> Parser::parse_assign() {
         expect(TokenType::Semi);
         return std::make_unique<ExprStmt>(std::make_unique<BinaryExpr>(std::string(1, op) + "=", std::make_unique<IdentExpr>(name), std::make_unique<BinaryExpr>("+", std::make_unique<IdentExpr>(name), std::make_unique<LiteralExpr>(Value(1)))));
     }    
-    throw std::runtime_error("Expected assignment operator");
+    throw std::runtime_error(std::string("Parser::parse_assign: Expected assignment operator at ")
+                             + std::to_string(current.row) + ":" + std::to_string(current.col));
 }
 
 std::unique_ptr<Stmt> Parser::parse_if() {
@@ -126,7 +128,8 @@ std::unique_ptr<Stmt> Parser::parse_for() {
         var_name = current.lexeme;
         advance();
     } else {
-        throw std::runtime_error("Expected identifier in for-each");
+        throw std::runtime_error(std::string("Parser::parse_for: Expected identifier in for-each at ")
+                                 + std::to_string(current.row) + ":" + std::to_string(current.col));
     }
     expect(TokenType::Colon);
     auto iterable = parse_expr(); // full precedence
@@ -141,9 +144,9 @@ std::unique_ptr<Stmt> Parser::parse_stmt() {
     if (current.type == TokenType::KwCheck) return parse_check();
     if (current.type == TokenType::LBrace) return parse_block();
     if (current.type == TokenType::KwRecheck) return parse_recheck();
-    // if (current.type == TokenType::KwLet) return parse_decl(); // not yet implemented
     if (current.type == TokenType::Ident) return parse_assign();
-    throw std::runtime_error("Invalid statement");
+    throw std::runtime_error(std::string("Parser::parse_stmt: Invalid statement at ")
+                             + std::to_string(current.row) + ":" + std::to_string(current.col));
 }
 
 

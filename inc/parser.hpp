@@ -2,7 +2,6 @@
 #pragma once
 #include "expr.hpp"
 #include "stmt.hpp"
-#include "decl.hpp"
 #include "lexer.hpp"
 #include "ast.hpp"
 #include <memory>
@@ -10,14 +9,14 @@
 
 
 struct Parser {
-    explicit Parser(Lexer& l) : lexer(l) { lexer.advance(); }
+    explicit Parser(Lexer& l) : lexer(l) { current = lexer.current; }
     Parser() = default;
 
     std::unique_ptr<Node> parse(); // new entry point
     Lexer& lexer;
     Token current;
 
-    void advance() { current = lexer.get_next_token(); lexer.advance(); }
+    void advance() { current = lexer.get_next_token(); lexer.current = current; }
     void expect(TokenType type);
 
     std::unique_ptr<Expr> parse_expr();

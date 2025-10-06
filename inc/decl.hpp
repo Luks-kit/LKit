@@ -1,9 +1,13 @@
 #pragma once
 #include "node.hpp"
-#include "stmt.hpp"
+#include <string>
 #include <vector>
 #include <memory>
 #include <utility>
+
+// Forward declarations to avoid circular includes between decl.hpp and stmt.hpp
+struct Expr;
+struct Stmt;
 
 enum class DeclKind { Var, Subr, Struct, Enum, Union, Tool, Kit };
 
@@ -59,3 +63,4 @@ struct KitDecl : Decl {
     std::vector<std::unique_ptr<Decl>> exports;
     KitDecl(std::string n) : Decl(DeclKind::Kit), name(std::move(n)) {}
 };
+

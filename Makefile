@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -Wall -Wextra -g
+CXXFLAGS := -Wall -Wextra -g -std=gnu++17
 INCFLAGS := -Iinc
 
 # Build layout
@@ -37,12 +37,5 @@ run: all
 	$(TARGET)
 
 test: all
-	$(TARGET) < build/test.toy
-	rm -f $(TARGET)
-	rm -rf build/objects
+	./scripts/run_tests.sh
 
-run: all
-	$(TARGET)
-
-test: build/test.toy $(TARGET)
-	$(TARGET) < $< 

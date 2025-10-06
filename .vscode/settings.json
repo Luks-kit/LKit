@@ -53,6 +53,8 @@
         "variant": "cpp",
         "err": "cpp",
         "err1": "cpp",
-        "err2": "cpp"
-    }
+        "err2": "cpp",
+        "err5": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

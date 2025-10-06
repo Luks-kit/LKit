@@ -3,40 +3,10 @@
 #include <string>
 #include <cmath>
 #include <variant>
+#include "interpret.hpp"
 #include "ast.hpp"
 #include "eval.hpp"
 #include "value.hpp"
-
-struct Var { std::string name; Value* addr; };
-static std::vector<std::vector<Var>> scopes = { {} };
-
-static void push_scope() { scopes.push_back({}); }
-static void pop_scope() {
-    for (auto& v : scopes.back()) delete v.addr;
-    scopes.pop_back();
-}
-void cleanup_scopes() { while (!scopes.empty()) pop_scope(); }
-
-static void decl_var(const std::string& name, Value value = 0) {
-    scopes.back().push_back({name, new Value(value)});
-
-}
-
-
-static Value get_var(const std::string& name) {
-    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-        for (auto& v : *it) if (v.name == name) return *(v.addr);
-    }
-    throw std::runtime_error(std::string("Undefined variable: ") + name);
-}
-
-static void set_var(const std::string& name, Value value) {
-    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-        for (auto& v : *it) if (v.name == name) { *(v.addr) = value; return; }
-    }
-
-    throw std::runtime_error(std::string("Undefined variable: ") + name);  // "let" works, no auto decl for now
-}
 
 
 
@@ -109,6 +79,8 @@ Value eval_decl(AST *n)
     auto &declared = n->as_decl();
     Value val = declared.expr ? eval(declared.expr) : 0;
     decl_var(declared.name, val);
+    // DEBUG: dump current top-level scope after declaration
+    // no-op; declaration handled by decl_var
     return val;
 }
 
@@ -193,8 +165,8 @@ Value eval_binop(AST *n)
         return pow(l.get<float>(), r.get<float>());
     }
     else if (b.op == "/")
-        if (r.value != Value(0).value) return l / r;
-        else throw std::runtime_error("division by zero"); // weird Value(0).value, but ok
+        if (r != Value(0)) return l / r;
+        else throw std::runtime_error("division by zero");
     else if (b.op == "&")
         return l & r;
     else if (b.op == "|")
@@ -208,21 +180,21 @@ Value eval_binop(AST *n)
     else if (b.op == "~")
         return ~r;
     else if (b.op == "neg")
-        return Value(0) - r.value; // again, ignore this
+        return Value(0) - r;
     else if (b.op == "!")
-        return !(r != 0);
+        return Value(!(r != Value(0)));
     else if (b.op == "<")
-        return l.value < r.value;
+        return Value(l < r);
     else if (b.op == ">")
-        return l.value > r.value;
+        return Value(l > r);
     else if (b.op == "<=")
-        return l.value <= r.value;
+        return Value(l <= r);
     else if (b.op == ">=")
-        return l.value >= r.value;
+        return Value(l >= r);
     else if (b.op == "==")
-        return l.value == r.value;
+        return Value(l == r);
     else if (b.op == "!=")
-        return l.value != r.value;
+        return Value(l != r);
 
     throw std::runtime_error("Unknown binop");
 }
