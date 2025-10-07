@@ -6,6 +6,7 @@
 #include "eval.hpp"
 
 void reploop(){
+    EvalRuntime runtime;
     std::string line, source;
     int brace_balance = 0;
     Lexer lex;
@@ -28,17 +29,18 @@ void reploop(){
             continue;
         }
 
-    // Only parse when braces are balanced
-    lex.reset_lexer(source);
-    Parser parser(lex);
-    std::unique_ptr<Node> tree = parser.parse();
-    Evaluator evaluator;
-    Value result;
-    if (tree) result = evaluator.eval(tree.get());
-    std::cout << "Result: " << result.toString() << "\n";
+        // Only parse when braces are balanced
+        lex.reset_lexer(source);
+        Parser parser(lex);
+        std::unique_ptr<Node> tree = parser.parse();
+        Evaluator evaluator(runtime);
+        // Initialize runtime if needed
+        if (runtime.is_scope_empty()) runtime.push_scope();
+        Value result = evaluator.eval(static_cast<const Node*>(tree.get()));
+        std::cout << "Result: " << result.toString() << "\n";
         source.clear();
     }       
-    cleanup_scopes();
+    runtime.cleanup_scopes();
     
 }
 

@@ -33,8 +33,7 @@ std::unique_ptr<Stmt> Parser::parse_check() {
         }
         return std::make_unique<CheckStmt>(std::move(expr), std::move(arms));
     } else {
-        throw std::runtime_error(std::string("Parser::parse_check: Expected 'only' or 'on' after check(expr) at ")
-                                 + std::to_string(current.row) + ":" + std::to_string(current.col));
+        throw std::runtime_error("Expected 'only' or 'on' after check(expr)");
     }
 }
 
@@ -73,7 +72,7 @@ std::unique_ptr<Stmt> Parser::parse_assign() {
         auto rhs = parse_expr(); // full precedence
         expect(TokenType::Semi);
         advance(); 
-        return std::make_unique<ExprStmt>(std::make_unique<BinaryExpr>("=", std::make_unique<IdentExpr>(name), std::move(rhs)));
+        return std::make_unique<AssignStmt>(std::move(rhs), name);
     }
     if(current.type == TokenType::PlusEq || current.type == TokenType::MinusEq ||
        current.type == TokenType::StarEq || current.type == TokenType::SlashEq) {
@@ -84,17 +83,16 @@ std::unique_ptr<Stmt> Parser::parse_assign() {
         advance(); 
         auto rhs = parse_expr();
         expect(TokenType::Semi);
-        return std::make_unique<ExprStmt>(std::make_unique<BinaryExpr>(std::string(1, op) + "=", std::make_unique<IdentExpr>(name), std::move(rhs)));
+        return std::make_unique<AssignOpStmt>(name, std::move(rhs), op);
     }  
 
     if (current.type == TokenType::Increment || current.type == TokenType::Decrement) {
         char op = (current.type == TokenType::Increment) ? '+' : '-';
         advance();
         expect(TokenType::Semi);
-        return std::make_unique<ExprStmt>(std::make_unique<BinaryExpr>(std::string(1, op) + "=", std::make_unique<IdentExpr>(name), std::make_unique<BinaryExpr>("+", std::make_unique<IdentExpr>(name), std::make_unique<LiteralExpr>(Value(1)))));
+        return std::make_unique<IncDecStmt>(name, op);
     }    
-    throw std::runtime_error(std::string("Parser::parse_assign: Expected assignment operator at ")
-                             + std::to_string(current.row) + ":" + std::to_string(current.col));
+    throw std::runtime_error("Expected assignment operator");
 }
 
 std::unique_ptr<Stmt> Parser::parse_if() {
@@ -128,8 +126,7 @@ std::unique_ptr<Stmt> Parser::parse_for() {
         var_name = current.lexeme;
         advance();
     } else {
-        throw std::runtime_error(std::string("Parser::parse_for: Expected identifier in for-each at ")
-                                 + std::to_string(current.row) + ":" + std::to_string(current.col));
+        throw std::runtime_error("Expected identifier in for-each");
     }
     expect(TokenType::Colon);
     auto iterable = parse_expr(); // full precedence
@@ -145,8 +142,7 @@ std::unique_ptr<Stmt> Parser::parse_stmt() {
     if (current.type == TokenType::LBrace) return parse_block();
     if (current.type == TokenType::KwRecheck) return parse_recheck();
     if (current.type == TokenType::Ident) return parse_assign();
-    throw std::runtime_error(std::string("Parser::parse_stmt: Invalid statement at ")
-                             + std::to_string(current.row) + ":" + std::to_string(current.col));
+    throw std::runtime_error("Invalid statement");
 }
 
 

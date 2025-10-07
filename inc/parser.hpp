@@ -9,7 +9,7 @@
 
 
 struct Parser {
-    explicit Parser(Lexer& l) : lexer(l) { current = lexer.current; }
+    explicit Parser(Lexer& l) : lexer(l) { lexer.advance(); }
     Parser() = default;
 
     std::unique_ptr<Node> parse(); // new entry point

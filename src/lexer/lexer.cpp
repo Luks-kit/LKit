@@ -28,52 +28,47 @@ const std::unordered_map<std::string, TokenType> Lexer::keywords = {
 Token Lexer::get_next_token() {
     skip_whitespace();
     if (pos >= src.size()) {
-        return Token{TokenType::End, 0, "", row, col};
+        return {TokenType::End, 0, ""};
     }
 
     char c = src[pos];
 
     Token literal = literal_check();
-    if (literal.type == TokenType::Literal) { literal.row = row; literal.col = col; return literal; }
+    if (literal.type == TokenType::Literal) return literal;
 
     // identifiers / keywords
     if (is_ident_start(c)) {
         std::string ident;
-        size_t start_row = row;
-        size_t start_col = col;
         while (pos < src.size() && is_ident_char(src[pos])) {
             ident.push_back(src[pos++]);
-            col++;
         }
-        Token t = ident_check(ident, start_row, start_col);
-        t.row = start_row; t.col = start_col;
-        return t;
+        return ident_check(ident);
     }
 
     // access chars and operators
     Token access_return = access_check();
-    if(access_return.type != TokenType::End) { access_return.row = row; access_return.col = col; return access_return; }
+    if(access_return.type != TokenType::End) { return access_return; }
     // single char tokens...
     Token op_return = op_check();
 
-    if(op_return.type != TokenType::End) { op_return.row = row; op_return.col = col; return op_return; }
+    if(op_return.type != TokenType::End) { return op_return; }
 
-    std::cerr << "Unknown character: " << c << " at " << row << ":" << col << "\n";
-    return Token{TokenType::End, 0, "", row, col};
+    std::cerr << "Unknown character: " << c << "\n";
+    return {TokenType::End, 0, ""};
 }
 
-Token Lexer::ident_check(const std::string& ident, size_t start_row, size_t start_col){
+Token Lexer::ident_check(const std::string& ident){
 
      // keyword checks...
 
         auto it = keywords.find(ident);
         if (it != keywords.end()) {
-            if (it->first == "true") return Token{it->second, true, ident, start_row, start_col};
-            if (it->first == "false") return Token{it->second, false, ident, start_row, start_col};
-            return Token{it->second, 0, ident, start_row, start_col};
+            if (it->first == "true") return {it->second, true, ident};
+            if (it->first == "false") return {it->second, false, ident};
+            return {it->second, 0, ident};
         }
 
-        return Token{TokenType::Ident, 0, ident, start_row, start_col};
+        return {TokenType::Ident, 0, ident};
 }
 
 Token Lexer::literal_check(){
@@ -100,29 +95,29 @@ Token Lexer::literal_check(){
     else
         val.set<int>(std::stoi(numStr));
 
-    return Token{TokenType::Literal, val, "", row, col};
+    return Token{TokenType::Literal, val, ""};
     }
 
     // Boolean literals
     if (match_str("true")) {
         Value val;
         val.set<bool>(true);
-        return Token{TokenType::Literal, val, "true", row, col};
+        return Token{TokenType::Literal, val, "true"};
     }
     if (match_str("false")) {
         Value val;
         val.set<bool>(false);
-        return Token{TokenType::Literal, val, "false", row, col};
+        return Token{TokenType::Literal, val, "false"};
     }
 
     // Character literal
     if (c == '\'') {
         pos++; // skip opening '
-    if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Unterminated char literal at ") + std::to_string(row) + ":" + std::to_string(col));
+        if (pos >= src.size()) throw std::runtime_error("Unterminated char literal");
 
         char ch = src[pos++];
         if (ch == '\\') {
-            if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Invalid escape sequence in char literal at ") + std::to_string(row) + ":" + std::to_string(col));
+            if (pos >= src.size()) throw std::runtime_error("Invalid escape sequence");
             char esc = src[pos++];
             switch (esc) {
                 case 'n': ch = '\n'; break;
@@ -131,17 +126,17 @@ Token Lexer::literal_check(){
                 case '\\': ch = '\\'; break;
                 case '\'': ch = '\''; break;
                 case '0': ch = '\0'; break;
-                default: throw std::runtime_error(std::string("Lexer::literal_check: Unknown escape in char literal at ") + std::to_string(row) + ":" + std::to_string(col));
+                default: throw std::runtime_error("Unknown escape in char literal");
             }
         }
 
         if (pos >= src.size() || src[pos] != '\'')
-            throw std::runtime_error(std::string("Lexer::literal_check: Unterminated char literal at ") + std::to_string(row) + ":" + std::to_string(col));
+            throw std::runtime_error("Unterminated char literal");
         pos++; // skip closing '
 
         Value val;
         val.set<char>(ch);
-    return Token{TokenType::Literal, val, "", row, col};
+        return Token{TokenType::Literal, val, ""};
     }
 
     // String literal
@@ -151,7 +146,7 @@ Token Lexer::literal_check(){
         while (pos < src.size() && src[pos] != '"') {
             if (src[pos] == '\\') {
                 pos++;
-                if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Invalid escape in string at ") + std::to_string(row) + ":" + std::to_string(col));
+                if (pos >= src.size()) throw std::runtime_error("Invalid escape in string");
                 char esc = src[pos++];
                 switch (esc) {
                     case 'n': s += '\n'; break;
@@ -165,15 +160,15 @@ Token Lexer::literal_check(){
                 s += src[pos++];
             }
         }
-    if (pos >= src.size()) throw std::runtime_error(std::string("Lexer::literal_check: Unterminated string literal at ") + std::to_string(row) + ":" + std::to_string(col));
+        if (pos >= src.size()) throw std::runtime_error("Unterminated string literal");
         pos++; // skip closing "
 
         Value val;
         val.set<std::string>(s);
-    return Token{TokenType::Literal, val, "", row, col};
+        return Token{TokenType::Literal, val, ""};
     }
 
-    return Token{TokenType::End, 0, "", row, col};
+    return Token{TokenType::End, 0, ""};
 
 }
 

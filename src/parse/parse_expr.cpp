@@ -8,8 +8,7 @@
 
 std::unique_ptr<Expr> Parser::parse_literal() {
     if (current.type != TokenType::Literal)
-    throw std::runtime_error(std::string("Parser::parse_literal: Expected literal at ")
-                 + std::to_string(current.row) + ":" + std::to_string(current.col));
+        throw std::runtime_error("Expected literal");
 
     auto lit = std::make_unique<LiteralExpr>(current.value);
     advance();
@@ -32,8 +31,7 @@ std::unique_ptr<Expr> Parser::parse_factor() {
         advance();
         return expr;
     }
-    throw std::runtime_error(std::string("Parser::parse_factor: Unexpected token in factor at ")
-                             + std::to_string(current.row) + ":" + std::to_string(current.col));
+    throw std::runtime_error("Unexpected token in factor");
 }    
         
 std::unique_ptr<Expr> Parser::parse_unary() {
@@ -108,8 +106,7 @@ std::unique_ptr<Expr> Parser::parse_comparison() {
             case TokenType::NotEq: op = "!="; break;
             case TokenType::BoolAnd: op = "&&"; break;
             case TokenType::BoolOr: op = "||"; break;
-            default: throw std::runtime_error(std::string("Parser::parse_comparison: Invalid comparison operator at ")
-                                              + std::to_string(current.row) + ":" + std::to_string(current.col));
+            default: throw std::runtime_error("Invalid comparison operator");
         }  
         advance();
         auto right = parse_bitwise_or();

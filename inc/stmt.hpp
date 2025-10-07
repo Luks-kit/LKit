@@ -22,6 +22,27 @@ struct ExprStmt : Stmt {
         : Stmt(StmtKind::ExprStmt), expr(std::move(e)) {}
 };
 
+struct AssignStmt : Stmt {
+    std::string identifier;
+    std::unique_ptr<Expr> rhs;
+    AssignStmt(std::unique_ptr<Expr> init, const std::string& id)
+        : Stmt(StmtKind::ExprStmt), rhs(std::move(init)), identifier(id) {}
+};
+struct AssignOpStmt : Stmt {
+    std::string identifier;
+    std::unique_ptr<Expr> rhs;
+    char op; // '+', '-', '*', '/'
+    AssignOpStmt(std::string id, std::unique_ptr<Expr> r, char o)
+        : Stmt(StmtKind::ExprStmt), identifier(std::move(id)), rhs(std::move(r)), op(o) {}
+};
+struct IncDecStmt : Stmt {
+    std::string identifier;
+    char op; // '+' for increment, '-' for decrement
+    IncDecStmt(std::string id, char o)
+        : Stmt(StmtKind::ExprStmt), identifier(std::move(id)), op(o) {}
+}; 
+
+
 struct ReturnStmt : Stmt {
     std::unique_ptr<Expr> expr; // can be null for void return
     std::string type_name; // for compile time type checking

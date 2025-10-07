@@ -30,7 +30,7 @@ Value Evaluator::eval_stmt(const Stmt* s) {
 Value Evaluator::eval_block(const BlockStmt* b){
     // Create a new scope for the block
     Value ret;
-    push_scope();
+    runtime.push_scope();
     // Add any declarations to the current scope
     for (const auto& decl : b->decl) {
         if (decl) eval_decl(decl.get());
@@ -41,20 +41,7 @@ Value Evaluator::eval_block(const BlockStmt* b){
     for (const auto& stmt : b->stmts) {
         ret = eval_stmt(stmt.get());
     } 
-    if (b->rturn_stmt) {
-        if (!b->rturn_stmt->expr && !b->rturn_stmt->type_name.empty())
-            throw RuntimeError("Return type mismatch: expected " +
-                 b->rturn_stmt->type_name + " but got void");
-        else if (b->rturn_stmt->expr && b->rturn_stmt->type_name.empty())
-            throw RuntimeError("Return type mismatch: expected void but got value");
-        else if (b->rturn_stmt->type_name != b->type_name ) {
-            throw RuntimeError("Return type mismatch: expected " + b->rturn_stmt->type_name + 
-                " but got " + b->type_name);
-        }
-        else if (!b->rturn_stmt->expr) ret = Value(); // void return
-        else ret = eval_return(b->rturn_stmt.get());
-    }
-    pop_scope();
+    runtime.pop_scope();
     return ret;
 }
 
@@ -123,9 +110,9 @@ Value Evaluator::eval_recheck(const RecheckStmt* r){
 
 Value Evaluator::eval_return(const ReturnStmt* r){
     if (r->expr) {
-        return eval_expr(r->expr.get());
+        throw EvalRuntime::ReturnException(eval_expr(r->expr.get()));
     }
-    return Value{}; // or std::monostate{} if Value is a variant including monostate
+    else throw EvalRuntime::ReturnException(Value()); // or std::monostate{} if Value is a variant including monostate
 }
 
 

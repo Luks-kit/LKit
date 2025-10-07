@@ -21,10 +21,14 @@ inline void cleanup_scopes();
 #include <memory>
 #include <iostream>
 
+struct EvalRuntime; // forward declaration
+
 class Evaluator {
 public:
     Evaluator() = default;
+    explicit Evaluator(EvalRuntime& rt) : runtime(rt) {}
     ~Evaluator() = default;
+
     Value eval(const Node* node);
 private:
     Value eval_expr(const Expr* e);
@@ -51,6 +55,7 @@ private:
     void eval_union_decl(const UnionDecl* u);
     void eval_tool_decl(const ToolDecl* t);
     void eval_kit_decl(const KitDecl* k); */ // To be implemented in the near future  
+    EvalRuntime& runtime;
 };
 
 

@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-Value Evaluator::eval_expr(const Expr* e){
+Value Evaluator::eval_expr(const Expr* e) {
     switch (e->kind) {
         case ExprKind::Literal:
             return eval_literal(static_cast<const LiteralExpr*>(e));
@@ -39,9 +39,9 @@ Value Evaluator::eval_literal(const LiteralExpr* l){
 
 Value Evaluator::eval_ident(const IdentExpr* i){
     // Lookup variable in current scope
-    Scope current_scope = scopes.back();
+    EvalRuntime::Scope current_scope = runtime.get_current_scope();
     auto it = std::find_if(current_scope.begin(), current_scope.end(),
-        [&](const Var& v) { return v.name == i->name; });
+        [&](const EvalRuntime::Var& v) { return v.name == i->name; });
     if (it != current_scope.end()) {
         return *(it->addr); // Return the value of the found variable
     }
@@ -68,44 +68,6 @@ Value Evaluator::eval_binary(const BinaryExpr* b){
     if (b->op == "&&") return left && right;
     if (b->op == "||") return left || right;
 
-    // Assignment and compound assignment handling
-    if (b->op == "=") {
-        // lhs must be an identifier
-        const IdentExpr* id = dynamic_cast<const IdentExpr*>(b->lhs.get());
-        if (!id) throw RuntimeError("Assignment target must be an identifier");
-        set_var(id->name, right);
-        return right;
-    }
-    if (b->op == "+=") {
-        const IdentExpr* id = dynamic_cast<const IdentExpr*>(b->lhs.get());
-        if (!id) throw RuntimeError("Assignment target must be an identifier");
-        Value newv = left + right;
-        set_var(id->name, newv);
-        return newv;
-    }
-    if (b->op == "-=") {
-        const IdentExpr* id = dynamic_cast<const IdentExpr*>(b->lhs.get());
-        if (!id) throw RuntimeError("Assignment target must be an identifier");
-        Value newv = left - right;
-        set_var(id->name, newv);
-        return newv;
-    }
-    if (b->op == "*=") {
-        const IdentExpr* id = dynamic_cast<const IdentExpr*>(b->lhs.get());
-        if (!id) throw RuntimeError("Assignment target must be an identifier");
-        Value newv = left * right;
-        set_var(id->name, newv);
-        return newv;
-    }
-    if (b->op == "/=") {
-        const IdentExpr* id = dynamic_cast<const IdentExpr*>(b->lhs.get());
-        if (!id) throw RuntimeError("Assignment target must be an identifier");
-        if (right == 0) throw RuntimeError("Division by zero");
-        Value newv = left / right;
-        set_var(id->name, newv);
-        return newv;
-    }
-
     throw RuntimeError("Unknown binary operator: " + b->op);
 }
 
@@ -114,22 +76,23 @@ Value Evaluator::eval_unary(const UnaryExpr* u){
 
     if (u->op == "-") return -operand;
     if (u->op == "!") return !operand;
+    if (u->op == "~") return ~operand;
 
     throw RuntimeError("Unknown unary operator: " + u->op);
 }
 
 Value Evaluator::eval_call(const CallExpr* c){
     Value callee = eval_expr(c->callee.get());
-    if (!std::holds_alternative<std::string>(callee.value)) {
+    if (callee.type != ValueType::STRING) {
         throw RuntimeError("Attempted to call a non-function value");
     }
-    std::string func_name = std::get<std::string>(callee.value);
+    std::string func_name = callee.get<std::string>();
 
     std::vector<Value> arg_values;
     for (const auto& arg : c->args) {
         arg_values.push_back(eval_expr(arg.get()));
     }
 
-    return call_subr(func_name, arg_values);
+    return runtime.call_subr(func_name, arg_values, *this);
 
 }

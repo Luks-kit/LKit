@@ -1,3 +1,6 @@
+#ifdef OLD_EVAL
+// This is the old eval implementation, kept for reference.
+// New implementation uses Evaluator class in eval_expr.cpp and eval_stmt.cpp
 #include <iostream>
 #include <vector>
 #include <string>
@@ -198,3 +201,4 @@ Value eval_binop(AST *n)
 
     throw std::runtime_error("Unknown binop");
 }
+#endif

@@ -18,7 +18,7 @@ void Evaluator::eval_decl(const Decl* d) {
             eval_var_decl(static_cast<const VarDecl*>(d));
             break;
         case DeclKind::Subr:
-            eval_subr_decl(static_cast<const SubrDecl*>(d));
+            eval_subr_decl(static_cast<const SubrDecl*>(d)  );
             break; /*
         case DeclKind::Struct:
             eval_struct_decl(static_cast<const StructDecl*>(d));
@@ -42,57 +42,45 @@ void Evaluator::eval_decl(const Decl* d) {
 
 void Evaluator::eval_var_decl(const VarDecl* v){
     Value init_val; // default initialization
-    // If no explicit type was provided, infer from initializer if present
-    if (v->type_name.empty()) {
-        if (v->init) {
-            Value expr_val = eval_expr(v->init.get());
-            init_val = expr_val;
-        } else {
-            // default to int 0
-            init_val = Value(0);
-        }
-    } else {
-        // explicit type provided
-        if (stringToValueType(v->type_name) == ValueType::NONE && !v->init)
-            throw RuntimeError("Variable " + v->name + " declared with void type");
-        if (is_user_type(v->type_name) && !v->init)
-            throw RuntimeError("Variable " + v->name + " of user-defined type " + v->type_name + " must be initialized");
-        init_val.type = stringToValueType(v->type_name);
-        if (init_val.type == ValueType::USERDEFINED && !is_user_type(v->type_name))
-            throw RuntimeError("Unknown type for variable " + v->name + ": " + v->type_name);
-        if (init_val.type != ValueType::USERDEFINED && v->init && stringToValueType(v->type_name) == ValueType::USERDEFINED)
+    if (EvalRuntime::stringToValueType(v->type_name) == ValueType::NONE && !v->init)
+        throw RuntimeError("Variable " + v->name + " declared with void type");
+    if (EvalRuntime::is_user_type(v->type_name) && !v->init)
+        throw RuntimeError("Variable " + v->name + " of user-defined type " + v->type_name + " must be initialized");
+    init_val.type = EvalRuntime::stringToValueType(v->type_name);
+    if (init_val.type == ValueType::USERDEFINED && !EvalRuntime::is_user_type(v->type_name))
+        throw RuntimeError("Unknown type for variable " + v->name + ": " + v->type_name);
+    if (init_val.type != ValueType::USERDEFINED && v->init && EvalRuntime::stringToValueType(v->type_name) == ValueType::USERDEFINED)
+        throw RuntimeError("Type mismatch in initialization of variable " + v->name + 
+            ": expected user-defined type but got basic type");
+    if (v->init && init_val.type == ValueType::USERDEFINED) {
+        Value expr_val = eval_expr(v->init.get());
+        if (expr_val.type != ValueType::USERDEFINED || 
+            std::get<userdefined>(expr_val.value).type_name != v->type_name) {
             throw RuntimeError("Type mismatch in initialization of variable " + v->name + 
-                ": expected user-defined type but got basic type");
-        if (v->init && init_val.type == ValueType::USERDEFINED) {
-            Value expr_val = eval_expr(v->init.get());
-            if (expr_val.type != ValueType::USERDEFINED || 
-                std::get<userdefined>(expr_val.value).type_name != v->type_name) {
-                throw RuntimeError("Type mismatch in initialization of variable " + v->name + 
-                    ": expected user-defined type " + v->type_name + 
-                    " but got " + std::get<userdefined>(expr_val.value).type_name);
-            }
-            init_val = expr_val;
-        } else if (v->init) {
-            Value expr_val = eval_expr(v->init.get());
-            if (expr_val.type != init_val.type) {
-                // Allow implicit conversion from int to float/double
-                if (init_val.type == ValueType::FLOAT && expr_val.type == ValueType::INT) {
-                    expr_val.promoteToFloat();
-                } else if (init_val.type == ValueType::DOUBLE && expr_val.type == ValueType::INT) {
-                    double d = static_cast<double>(std::get<int>(expr_val.value));
-                    expr_val = Value(d);
-                    expr_val.type = ValueType::DOUBLE;
-                } else {
-                    throw RuntimeError("Type mismatch in initialization of variable " + v->name + 
-                        ": expected " + valueTypeToString(init_val.type) + 
-                        " but got " + valueTypeToString(expr_val.type));
-                }
-            }
-            init_val = expr_val;
+                ": expected user-defined type " + v->type_name + 
+                " but got " + std::get<userdefined>(expr_val.value).type_name);
         }
+        init_val = expr_val;
+    } else if (v->init) {
+        Value expr_val = eval_expr(v->init.get());
+        if (expr_val.type != init_val.type) {
+            // Allow implicit conversion from int to float/double
+            if (init_val.type == ValueType::FLOAT && expr_val.type == ValueType::INT) {
+                expr_val.promoteToFloat();
+            } else if (init_val.type == ValueType::DOUBLE && expr_val.type == ValueType::INT) {
+                double d = static_cast<double>(std::get<int>(expr_val.value));
+                expr_val = Value(d);
+                expr_val.type = ValueType::DOUBLE;
+            } else {
+                throw RuntimeError("Type mismatch in initialization of variable " + v->name + 
+                    ": expected " + runtime.valueTypeToString(init_val.type) + 
+                    " but got " + runtime.valueTypeToString(expr_val.type));
+            }
+        }
+        init_val = expr_val;
     }
     // Add variable to current scope
-    decl_var(v->name, init_val);
+    runtime.decl_var(v->name, init_val);
 }
 
 void Evaluator::eval_subr_decl(const SubrDecl* s){
@@ -108,7 +96,7 @@ void Evaluator::eval_subr_decl(const SubrDecl* s){
             body = nullptr;
         }
     }
-    decl_subr(s->name, param_names, body);
+    runtime.decl_subr(s->name, param_names, body);
  }
 
 

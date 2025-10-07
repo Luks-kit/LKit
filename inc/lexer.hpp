@@ -76,15 +76,11 @@ struct Token {
     TokenType type;
     Value value;
     std::string lexeme;
-    size_t row = 1;
-    size_t col = 1;
 };
 
 struct Lexer {
     std::string src;
     size_t pos = 0;
-    size_t row = 1;
-    size_t col = 1;
     Token current;
 
     Lexer(const std::string& input) : src(input), pos(0) {
@@ -96,31 +92,27 @@ struct Lexer {
     void reset_lexer(const std::string& input) {  src = input; pos = 0; current = get_next_token(); }
         
     Token op_check();
-    Token ident_check(const std::string& ident, size_t start_row = 0, size_t start_col = 0);
+    Token ident_check(const std::string& ident);
     Token literal_check();
     Token access_check();
-    void log_token(const Token& tok) {
+    void log_token() {
 #ifdef TOKEN_LOG
         std::cerr << "Token: ";
-        if (tok.type != TokenType::Literal) std::cerr << tok.lexeme;
+        if (current.type != TokenType::Literal) std::cerr << current.lexeme;
         else std::cerr << "<literal>";
-        std::cerr << " type=" << token_type_to_string(tok.type)
-                  << " @" << tok.row << ":" << tok.col << std::endl;
+        std::cerr << " type=" << token_type_to_string(curren.type) << std::endl;
 #endif
     }
 
     void advance() {
 #ifdef TOKEN_LOG
-    log_token(current);
+    log_token();
 #endif
         current = get_next_token();
     }
 
     void skip_whitespace() {
-        while (pos < src.size() && isspace((unsigned char)src[pos])) {
-            if (src[pos] == '\n') { row++; col = 1; pos++; }
-            else { pos++; col++; }
-        }
+        while (pos < src.size() && isspace(src[pos])) pos++;
     }
     bool is_ident_start(char c) {
         return isalpha(c) || c == '_';
@@ -142,11 +134,7 @@ struct Lexer {
         }
 
         // match succeeded, advance and return true
-        // advance pos and update row/col for matched string
-        for (size_t i = 0; i < s.size(); ++i) {
-            if (src[pos] == '\n') { row++; col = 1; pos++; }
-            else { pos++; col++; }
-        }
+        pos += s.size();
         return true;
 }
      static const std::unordered_map<std::string, TokenType> keywords;

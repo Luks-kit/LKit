@@ -31,15 +31,13 @@ std::unique_ptr<Decl> Parser::parse_var_decl() {
             advance(); // consume ';'
             return std::make_unique<VarDecl>(name, type, nullptr); 
         } else {
-            throw std::runtime_error(std::string("Parser::parse_var_decl: Expected '=' or ';' after variable declaration at ")
-                                     + std::to_string(current.row) + ":" + std::to_string(current.col));
+            throw std::runtime_error("Expected '=' or ';' after variable declaration");
         }
     } else if (current.type == TokenType::Semi) {
         advance(); // consume ';'
         return std::make_unique<VarDecl>(name, "", nullptr); 
     } else {
-        throw std::runtime_error(std::string("Parser::parse_var_decl: Expected ':', '=', or ';' after variable name at ")
-                                 + std::to_string(current.row) + ":" + std::to_string(current.col));
+        throw std::runtime_error("Expected ':', '=', or ';' after variable name");
     }
 }
 
@@ -186,8 +184,7 @@ std::unique_ptr<Decl> Parser::parse_tool_decl() {
         if (current.type == TokenType::KwSubr) {
             methods.push_back(parse_subr_decl());
         } else {
-            throw std::runtime_error(std::string("Parser::parse_tool_decl: Expected 'subr' in tool declaration at ")
-                                     + std::to_string(current.row) + ":" + std::to_string(current.col));
+            throw std::runtime_error("Expected 'subr' in tool declaration");
         }
     }
     expect(TokenType::RBrace);
@@ -213,8 +210,7 @@ std::unique_ptr<Decl> Parser::parse_kit_decl() {
             current.type == TokenType::KwTool) {
             exports.push_back(parse_decl());
         } else {
-            throw std::runtime_error(std::string("Parser::parse_kit_decl: Expected declaration in kit at ")
-                                     + std::to_string(current.row) + ":" + std::to_string(current.col));
+            throw std::runtime_error("Expected declaration in kit");
         }
     }
     expect(TokenType::RBrace);
@@ -233,7 +229,6 @@ std::unique_ptr<Decl> Parser::parse_decl() {
     if (current.type == TokenType::KwUnion) return parse_union_decl();
     if (current.type == TokenType::KwTool) return parse_tool_decl();
     if (current.type == TokenType::KwKit) return parse_kit_decl();
-    throw std::runtime_error(std::string("Parser::parse_decl: Expected declaration at ")
-                             + std::to_string(current.row) + ":" + std::to_string(current.col));
+    throw std::runtime_error("Expected declaration");
 }
 
